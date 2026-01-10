@@ -1,1214 +1,1624 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>BankHack · Intrusion Login</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emoji Copy & Paste 😎</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-      --term-bg: #020403;
-      --term-fg: #00ff66;
-      --term-fg-dim: #00b050;
-      --accent: #00e6ff;
-      --accent-soft: #0094ff;
-      --error: #ff2a4f;
-      --warn: #ffe066;
-    }
-
     body {
-      background:
-        radial-gradient(circle at top, #061c10 0, #000 50%, #000 100%),
-        radial-gradient(circle at bottom, #020510 0, #000 60%);
-      color: var(--term-fg);
-      font-family: "Courier New", monospace;
-      font-size: 16px;              /* bigger base font */
-      min-height: 100vh;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      perspective: 1300px;
-      cursor: crosshair;
-    }
-
-    .power-vignette {
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at center, #000 0, #000 40%, transparent 75%);
-      opacity: 0.85;
-      pointer-events: none;
-      z-index: 50;
-      animation: power-on 1.4s ease-out forwards;
-    }
-
-    .deck-wrapper {
-      width: min(1200px, 100vw);
-      height: min(700px, 100vh);   /* slightly taller */
-      position: relative;
-      transform-style: preserve-3d;
-      transition: transform 200ms ease-out, box-shadow 200ms ease-out;
-      box-shadow:
-        0 40px 80px rgba(0, 0, 0, 0.9),
-        0 0 60px rgba(0, 255, 120, 0.2);
-      border-radius: 14px;
-      overflow: hidden;
-    }
-
-    .deck-wrapper.glow {
-      box-shadow:
-        0 50px 130px rgba(0, 0, 0, 0.95),
-        0 0 110px rgba(0, 255, 160, 0.7);
-    }
-
-    .deck {
-      position: relative;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      display: flex;
-      transform-style: preserve-3d;
-    }
-
-    .crt-layer::before,
-    .crt-layer::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 8;
-    }
-
-    .crt-layer::before {
-      background-image: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, 0) 0,
-        rgba(0, 0, 0, 0.4) 2px
-      );
-      background-size: 100% 3px;
-      mix-blend-mode: multiply;
-      opacity: 0.6;              /* softer */
-      animation: scanlines-move 9s linear infinite;
-    }
-
-    .crt-layer::after {
-      background:
-        radial-gradient(circle at 10% 0, #0f05 0, transparent 55%),
-        radial-gradient(circle at 90% 100%, #0ff5 0, transparent 55%);
-      opacity: 0.08;
-      animation: crt-flicker 4s infinite alternate;
-    }
-
-    .global-glitch {
-      pointer-events: none;
-      position: fixed;
-      inset: 0;
-      z-index: 15;
-      background:
-        repeating-linear-gradient(
-          0deg,
-          rgba(0, 0, 0, 0.4) 0px,
-          rgba(0, 0, 0, 0.4) 2px,
-          transparent 2px,
-          transparent 4px
-        );
-      mix-blend-mode: screen;
-      opacity: 0;
-    }
-
-    .global-glitch.active {
-      animation: global-glitch 420ms steps(2, end);
-    }
-
-    .particle-layer {
-      pointer-events: none;
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      z-index: 1;
-    }
-
-    .particle {
-      position: absolute;
-      width: 3px;
-      height: 3px;
-      border-radius: 50%;
-      background: #00ff88;
-      box-shadow: 0 0 10px #00ff88;
-      opacity: 0.22;
-      animation: particle-drift 12s linear infinite;
-    }
-
-    #matrix {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      opacity: 0.28;
-      pointer-events: none;
-      filter: blur(0.4px);
-    }
-
-    #terminal-wrap {
-      position: relative;
-      z-index: 2;
-      flex: 3;
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid #003311;
-      background:
-        radial-gradient(circle at top, #031308 0, #000 65%),
-        repeating-linear-gradient(
-          to bottom,
-          rgba(0, 0, 0, 0.4) 0,
-          rgba(0, 0, 0, 0.4) 1px,
-          rgba(0, 0, 0, 0.25) 2px
-        );
-      box-shadow:
-        inset 0 0 35px #00ff6620,
-        inset 0 0 80px #00ff6612;
-    }
-
-    #terminal-header {
-      padding: 8px 16px;
-      border-bottom: 1px solid #003311;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: linear-gradient(to bottom, #001408, #000);
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      font-size: 12px;
-      color: var(--term-fg-dim);
-      position: relative;
-      z-index: 3;
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .header-led {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #14ff72;
-      box-shadow: 0 0 10px #14ff72;
-      animation: led-pulse 1.8s infinite ease-in-out;
-    }
-
-    #terminal-header span.badge {
-      padding: 2px 8px;
-      border-radius: 2px;
-      border: 1px solid #005522;
-      background: rgba(0, 40, 18, 0.7);
-      color: var(--accent);
-      font-size: 11px;
-    }
-
-    #terminal {
-      flex: 1;
-      padding: 18px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      overflow-y: auto;
-      color: var(--term-fg);
-      text-shadow:
-        0 0 2px #00ff6633,
-        1px 0 1px rgba(0, 255, 0, 0.4),
-        -1px 0 1px rgba(0, 255, 255, 0.3);
-      position: relative;
-      z-index: 2;
-      font-size: 15px;     /* larger terminal text */
-      line-height: 1.4;
-    }
-
-    .status-line { color: var(--term-fg-dim); }
-    .status-line.ok { color: var(--term-fg); }
-    .status-line.warn {
-      color: var(--warn);
-      text-shadow: 0 0 3px #ffe06655;
-    }
-    .status-line.err {
-      color: var(--error);
-      text-shadow: 0 0 6px #ff2a4fbb;
-    }
-
-    .flash-overlay {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at center, #0f05 0, transparent 60%);
-      opacity: 0;
-      pointer-events: none;
-      z-index: 5;
-    }
-
-    .flash-overlay.active {
-      animation: flash 260ms ease-out;
-    }
-
-    #hud {
-      position: relative;
-      z-index: 2;
-      flex: 1.2;
-      display: flex;
-      flex-direction: column;
-      background: radial-gradient(circle at 0 0, #01100a 0, #000 70%);
-      color: var(--term-fg-dim);
-      padding: 12px;
-      font-size: 12px;
-      border-left: 1px solid #00220f;
-    }
-
-    .logo-wrap {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-
-    .glitch {
-      position: relative;
-      font-size: 20px;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: #00ff88;
-      text-shadow:
-        0 0 4px #00ff88,
-        0 0 18px #00ff88;
-      animation: glitch-skew 3s infinite alternate;
-    }
-
-    .glitch::before,
-    .glitch::after {
-      content: attr(data-text);
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      overflow: hidden;
-    }
-
-    .glitch::before {
-      left: 1px;
-      text-shadow: -2px 0 #ff0066;
-      animation: glitch-anim-1 2.2s infinite linear alternate-reverse;
-    }
-
-    .glitch::after {
-      left: -1px;
-      text-shadow: 2px 0 #00e6ff;
-      animation: glitch-anim-2 1.7s infinite linear alternate-reverse;
-    }
-
-    .hud-section {
-      border: 1px solid #003818;
-      margin-bottom: 8px;
-      padding: 6px;
-      box-shadow: inset 0 0 10px #00ff6611;
-      background: linear-gradient(
-        135deg,
-        rgba(0, 30, 10, 0.9),
-        rgba(0, 0, 0, 0.9)
-      );
-      position: relative;
-    }
-
-    .hud-section::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border: 1px solid #00ff6614;
-      pointer-events: none;
-    }
-
-    .hud-title {
-      color: var(--accent-soft);
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      font-size: 10px;
-    }
-
-    .hud-kv {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 1px;
-    }
-
-    .hud-bar {
-      position: relative;
-      width: 100%;
-      height: 6px;
-      background: #001109;
-      border: 1px solid #00401c;
-      overflow: hidden;
-      margin-top: 3px;
-    }
-
-    .hud-bar-fill {
-      position: absolute;
-      inset: 0;
-      width: 50%;
-      background: linear-gradient(
-        90deg,
-        #00ff88 0,
-        #00ff55 40%,
-        #ffe066 100%
-      );
-      box-shadow: 0 0 10px #00ff6633;
-      transform-origin: left;
-    }
-
-    .hud-dots {
-      display: flex;
-      gap: 3px;
-      margin-top: 4px;
-    }
-
-    .hud-dot {
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: #014d27;
-      box-shadow: 0 0 4px #014d27;
-    }
-
-    .hud-dot.active {
-      background: #00ff66;
-      box-shadow: 0 0 6px #00ff66;
-    }
-
-    .hud-footer {
-      margin-top: auto;
-      font-size: 10px;
-      color: #006633;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: 'Segoe UI Emoji', sans-serif;
+      background: linear-gradient(135deg, #ffafbd, #ffc3a0);
+      margin: 0;
+      padding: 0;
       text-align: center;
-      padding-top: 4px;
-      border-top: 1px solid #00230f;
+      color: #222;
     }
-
-    #terminal::-webkit-scrollbar { width: 6px; }
-    #terminal::-webkit-scrollbar-track { background: #000; }
-    #terminal::-webkit-scrollbar-thumb {
-      background: #004d26;
-      border-radius: 3px;
+    header {
+      background-color: rgba(255, 255, 255, 0.6);
+      padding: 20px 0;
+      backdrop-filter: blur(6px);
     }
-    #terminal::-webkit-scrollbar-thumb:hover {
-      background: #00aa55;
+    h1 {
+      font-size: 2em;
+      margin: 0;
     }
-
-    /* LOGIN OVERLAY */
-    #login-overlay {
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at center, rgba(0,0,0,0.95) 0, rgba(0,0,0,0.98) 60%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
+    .search-container {
+      margin: 20px auto;
+      width: 80%;
+      max-width: 500px;
     }
-
-    .login-box {
-      border: 1px solid #00ff66;
-      padding: 18px 22px;
-      width: 320px;
-      max-width: 92vw;
-      background: #020604;
-      box-shadow:
-        0 0 25px #00ff6622,
-        0 0 70px #00ff6633;
-      text-shadow: 0 0 4px #00ff6644;
-      font-size: 13px;
-    }
-
-    .login-title {
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      margin-bottom: 8px;
-      color: #00ff88;
-      font-size: 13px;
-    }
-
-    .login-sub {
-      font-size: 12px;
-      color: var(--term-fg-dim);
-      margin-bottom: 10px;
-    }
-
-    .login-field {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 8px;
-      font-size: 12px;
-    }
-
-    .login-field label {
-      margin-bottom: 3px;
-      color: #00e6ff;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      font-size: 11px;
-    }
-
-    .login-field input {
-      background: #000;
-      border: 1px solid #006633;
-      color: var(--term-fg);
-      padding: 5px 7px;
-      font-family: "Courier New", monospace;
-      font-size: 13px;
-      outline: none;
-    }
-
-    .login-field input:focus {
-      border-color: #00ff66;
-      box-shadow: 0 0 6px #00ff6633;
-    }
-
-    .login-hint {
-      font-size: 10px;
-      color: #007744;
-      margin-bottom: 10px;
-    }
-
-    .login-error {
-      font-size: 11px;
-      color: var(--error);
-      min-height: 14px;
-      margin-bottom: 6px;
-    }
-
-    .login-button {
+    #searchInput {
       width: 100%;
-      padding: 7px 8px;
-      margin-top: 4px;
-      border: 1px solid #00ff66;
-      background: linear-gradient(to right, #003318, #008844);
-      color: #eafff2;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
+      padding: 12px;
+      font-size: 16px;
+      border: 2px solid rgba(255,255,255,0.5);
+      border-radius: 25px;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(6px);
+      outline: none;
+      font-family: inherit;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    #searchInput:focus {
+      border-color: #ff6b9d;
+      background: white;
+    }
+    .category {
+      background: rgba(255, 255, 255, 0.7);
+      margin: 20px auto;
+      padding: 15px;
+      width: 80%;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .category h2 {
+      margin-bottom: 10px;
+      color: #444;
+    }
+    .emoji {
+      display: inline-block;
+      font-size: 2em;
+      margin: 10px;
       cursor: pointer;
+      transition: transform 0.1s ease;
     }
-
-    .login-button:hover {
-      background: linear-gradient(to right, #00aa55, #00ff88);
+    .emoji:hover {
+      transform: scale(1.2);
     }
-
-    .login-meta {
-      margin-top: 8px;
-      font-size: 10px;
-      color: #005522;
+    .emoji.hidden {
+      display: none;
     }
-
-    @keyframes crt-flicker { 0% { opacity: 0.04; } 100% { opacity: 0.1; } }
-    @keyframes scanlines-move { 0% { transform: translateY(0); } 100% { transform: translateY(-3px); } }
-    @keyframes flash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
-    @keyframes led-pulse {
-      0%, 100% { opacity: 0.6; box-shadow: 0 0 6px #14ff72; }
-      50% { opacity: 1; box-shadow: 0 0 13px #14ff72; }
+    #copyNotification {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 25px;
+      font-size: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
     }
-    @keyframes glitch-skew {
-      0% { transform: skew(0deg); }
-      50% { transform: skew(0.4deg); }
-      100% { transform: skew(-0.4deg); }
+    #copyNotification.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-10px);
     }
-    @keyframes glitch-anim-1 {
-      0% { clip-path: inset(0 0 70% 0); transform: translate(-1px, -1px); }
-      20% { clip-path: inset(10% 0 40% 0); transform: translate(-2px, 1px); }
-      40% { clip-path: inset(40% 0 20% 0); transform: translate(1px, -1px); }
-      60% { clip-path: inset(80% 0 5% 0); transform: translate(0, 1px); }
-      80% { clip-path: inset(10% 0 60% 0); transform: translate(2px, 0); }
-      100% { clip-path: inset(0 0 70% 0); transform: translate(-1px, 0); }
-    }
-    @keyframes glitch-anim-2 {
-      0% { clip-path: inset(80% 0 0 0); transform: translate(1px, 0); }
-      20% { clip-path: inset(50% 0 20% 0); transform: translate(0, 1px); }
-      40% { clip-path: inset(10% 0 40% 0); transform: translate(-1px, 0); }
-      60% { clip-path: inset(40% 0 40% 0); transform: translate(0, -1px); }
-      80% { clip-path: inset(70% 0 10% 0); transform: translate(-2px, 1px); }
-      100% { clip-path: inset(80% 0 0 0); transform: translate(1px, 0); }
-    }
-    @keyframes global-glitch {
-      0% { opacity: 0.9; transform: translate(0, 0); }
-      40% { opacity: 0.6; transform: translate(-2px, 1px); }
-      80% { opacity: 0.9; transform: translate(3px, -1px); }
-      100% { opacity: 0; transform: translate(0, 0); }
-    }
-    @keyframes particle-drift {
-      0% { transform: translate3d(0, 0, 0); opacity: 0.12; }
-      50% { transform: translate3d(40px, -40px, 0); opacity: 0.4; }
-      100% { transform: translate3d(-20px, -80px, 0); opacity: 0; }
-    }
-    @keyframes power-on {
-      0% { opacity: 1; transform: scaleY(0.02); transform-origin: center; }
-      40% { opacity: 1; transform: scaleY(1); }
-      100% { opacity: 0; transform: scaleY(1); }
-    }
-
-    @media (max-width: 900px) {
-      body { font-size: 14px; }
-      .deck-wrapper {
-        width: 100vw;
-        height: 100vh;
-        border-radius: 0;
-      }
-      #hud {
-        order: -1;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 6px;
-        padding: 8px;
-      }
-      .hud-section {
-        flex: 1 1 48%;
-      }
+    footer {
+      margin: 30px 0;
+      font-size: 0.9em;
+      color: #555;
     }
   </style>
 </head>
 <body>
-<div class="power-vignette"></div>
-<div class="global-glitch" id="global-glitch"></div>
 
-<!-- LOGIN OVERLAY -->
-<div id="login-overlay">
-  <div class="login-box">
-    <div class="login-title">SECURE LOGIN - BANKHACK</div>
-    <div class="login-sub">Enter operator credentials to arm intrusion core.</div>
+  <header>
+    <h1>Emoji Copy & Paste 😍</h1>
+    <p>Click an emoji to copy it!</p>
+  </header>
 
-    <div class="login-field">
-      <label for="login-name">your name</label>
-      <input id="login-name" type="text" autocomplete="off" placeholder="Operator">
-    </div>
-
-    <div class="login-field">
-      <label for="login-user">account id</label>
-      <input id="login-user" type="text" autocomplete="off" placeholder="ID">
-    </div>
-    <div class="login-field">
-      <label for="login-pass">access key</label>
-      <input id="login-pass" type="password" autocomplete="off" placeholder="KEY">
-    </div>
-
-    <div class="login-hint">
-      BANKHACK is made to entertain people, for fun! <strong>Rabbit</strong> is making this for a fun game! <strong>Enjoy!</strong>
-    </div>
-    <div class="login-error" id="login-error"></div>
-    <div class="login-meta">ID: test1234 · KEY: test3333</div>
-    <button class="login-button" id="login-btn">LOGIN</button>
-
-    <button class="login-button" id="howto-btn" style="margin-top:8px;background:linear-gradient(to right,#003318,#444);">
-      HOW TO PLAY
-    </button>
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search emojis...(only about 79% of emojis are here in this..)">
   </div>
 
-  <!-- HOW TO PLAY OVERLAY -->
-  <div id="howto-overlay" style="
-       position: fixed;
-       inset: 0;
-       display: none;
-       align-items: center;
-       justify-content: center;
-       background: radial-gradient(circle at center, rgba(0,0,0,0.95) 0, rgba(0,0,0,0.98) 60%);
-       z-index: 150;">
-    <div class="login-box" style="max-width:420px;max-height:80vh;overflow-y:auto;">
-      <div class="login-title">HOW TO PLAY - BANKHACK</div>
-      <div class="login-error">
-        BankHack is a fake hacking simulator made for fun. Nothing here touches real banks.
-      </div>
-
-      <pre style="font-size:11px; line-height:1.3; white-space:pre-wrap;">
-1) LOG IN
-   • ID: test1234
-   • KEY: test3333
-   • NAME: You Choose!.
-
-2) ARM THE CONSOLE
-   • After login, the screen fades into the main terminal.
-   • Press any key in the terminal area and start spamming your keyboard.
-   • Each key feeds the intrusion script and types more "Python" code.
-
-3) WATCH THE BREACH
-   • The console will:
-     - Scan fake bank servers and open ports.
-     - "Decrypt" the vault.
-     - Dump sample accounts and balances.
-     - Exfiltrate $5,000,000 to a mule wallet.
-   • HUD updates:
-     - Accounts: 1247/1247 when the vault is unlocked.
-     - Balance: shows $5,000,000.00.
-     - Stolen: tracks how much you "steal" with commands.
-
-4) COMMAND MODE
-   • When you see: BREACH COMPLETE - laundering through crypto mixer
-     the console prints:
-       [READY] commands: transfer 1000 | dump | launder | exit
-   • Now type commands at the prompt line:
-       BankHack> transfer 1000
-       BankHack> dump
-       BankHack> launder
-       BankHack> exit
-
-   COMMANDS:
-   - transfer X
-       Moves X dollars from the vault to the stolen total.
-   - dump
-       Shows exposed rich accounts (fake numbers).
-   - launder
-       Prints a message about cleaning the stolen money.
-   - exit
-       Leaves command mode. You can re-run the breach by spamming keys again.
-
-REMEMBER: This is a visual toy only. Use it to look cool, not to do real hacking.
-      </pre>
-
-      <button class="login-button" id="howto-close" style="margin-top:8px;">
-        CLOSE
-      </button>
-    </div>
+  <div class="category">
+    <h2>🐾 Animals</h2>
+    <div class="emoji" data-keywords="dog puppy pet animal" onclick="copyEmoji('🐶')">🐶</div>
+    <div class="emoji" data-keywords="cat kitten pet animal" onclick="copyEmoji('🐱')">🐱</div>
+    <div class="emoji" data-keywords="mouse rodent animal" onclick="copyEmoji('🐭')">🐭</div>
+    <div class="emoji" data-keywords="hamster pet animal" onclick="copyEmoji('🐹')">🐹</div>
+    <div class="emoji" data-keywords="rabbit bunny animal" onclick="copyEmoji('🐰')">🐰</div>
+    <div class="emoji" data-keywords="fox animal wild" onclick="copyEmoji('🦊')">🦊</div>
+    <div class="emoji" data-keywords="bear animal wild" onclick="copyEmoji('🐻')">🐻</div>
+    <div class="emoji" data-keywords="panda bear animal" onclick="copyEmoji('🐼')">🐼</div>
+    <div class="emoji" data-keywords="koala animal australia" onclick="copyEmoji('🐨')">🐨</div>
+    <div class="emoji" data-keywords="tiger animal wild" onclick="copyEmoji('🐯')">🐯</div>
+    <div class="emoji" data-keywords="lion animal wild king" onclick="copyEmoji('🦁')">🦁</div>
+    <div class="emoji" data-keywords="cow animal farm" onclick="copyEmoji('🐮')">🐮</div>
+    <div class="emoji" data-keywords="pig animal farm" onclick="copyEmoji('🐷')">🐷</div>
+    <div class="emoji" data-keywords="pig nose animal" onclick="copyEmoji('🐽')">🐽</div>
+    <div class="emoji" data-keywords="frog animal amphibian" onclick="copyEmoji('🐸')">🐸</div>
+    <div class="emoji" data-keywords="monkey animal" onclick="copyEmoji('🐵')">🐵</div>
+    <div class="emoji" data-keywords="monkey see no evil" onclick="copyEmoji('🙈')">🙈</div>
+    <div class="emoji" data-keywords="monkey hear no evil" onclick="copyEmoji('🙉')">🙉</div>
+    <div class="emoji" data-keywords="monkey speak no evil" onclick="copyEmoji('🙊')">🙊</div>
+    <div class="emoji" data-keywords="monkey animal" onclick="copyEmoji('🐒')">🐒</div>
+    <div class="emoji" data-keywords="chicken animal farm" onclick="copyEmoji('🐔')">🐔</div>
+    <div class="emoji" data-keywords="penguin animal bird" onclick="copyEmoji('🐧')">🐧</div>
+    <div class="emoji" data-keywords="bird animal" onclick="copyEmoji('🐦')">🐦</div>
+    <div class="emoji" data-keywords="baby chick bird" onclick="copyEmoji('🐤')">🐤</div>
+    <div class="emoji" data-keywords="hatching chick bird" onclick="copyEmoji('🐣')">🐣</div>
+    <div class="emoji" data-keywords="baby chick bird" onclick="copyEmoji('🐥')">🐥</div>
+    <div class="emoji" data-keywords="duck animal bird" onclick="copyEmoji('🦆')">🦆</div>
+    <div class="emoji" data-keywords="eagle bird animal" onclick="copyEmoji('🦅')">🦅</div>
+    <div class="emoji" data-keywords="owl bird animal" onclick="copyEmoji('🦉')">🦉</div>
+    <div class="emoji" data-keywords="bat animal" onclick="copyEmoji('🦇')">🦇</div>
+    <div class="emoji" data-keywords="wolf animal wild" onclick="copyEmoji('🐺')">🐺</div>
+    <div class="emoji" data-keywords="boar animal wild" onclick="copyEmoji('🐗')">🐗</div>
+    <div class="emoji" data-keywords="horse animal" onclick="copyEmoji('🐴')">🐴</div>
+    <div class="emoji" data-keywords="unicorn mythical" onclick="copyEmoji('🦄')">🦄</div>
+    <div class="emoji" data-keywords="bee insect" onclick="copyEmoji('🐝')">🐝</div>
+    <div class="emoji" data-keywords="worm animal" onclick="copyEmoji('🪱')">🪱</div>
+    <div class="emoji" data-keywords="caterpillar insect" onclick="copyEmoji('🐛')">🐛</div>
+    <div class="emoji" data-keywords="butterfly insect" onclick="copyEmoji('🦋')">🦋</div>
+    <div class="emoji" data-keywords="snail animal" onclick="copyEmoji('🐌')">🐌</div>
+    <div class="emoji" data-keywords="ladybug insect" onclick="copyEmoji('🐞')">🐞</div>
+    <div class="emoji" data-keywords="ant insect" onclick="copyEmoji('🐜')">🐜</div>
+    <div class="emoji" data-keywords="beetle insect" onclick="copyEmoji('🪲')">🪲</div>
+    <div class="emoji" data-keywords="cockroach insect" onclick="copyEmoji('🪳')">🪳</div>
+    <div class="emoji" data-keywords="spider arachnid" onclick="copyEmoji('🕷️')">🕷️</div>
+    <div class="emoji" data-keywords="spider web" onclick="copyEmoji('🕸️')">🕸️</div>
+    <div class="emoji" data-keywords="scorpion arachnid" onclick="copyEmoji('🦂')">🦂</div>
+    <div class="emoji" data-keywords="turtle animal reptile" onclick="copyEmoji('🐢')">🐢</div>
+    <div class="emoji" data-keywords="snake reptile" onclick="copyEmoji('🐍')">🐍</div>
+    <div class="emoji" data-keywords="lizard reptile" onclick="copyEmoji('🦎')">🦎</div>
+    <div class="emoji" data-keywords="octopus sea animal" onclick="copyEmoji('🐙')">🐙</div>
+    <div class="emoji" data-keywords="squid sea animal" onclick="copyEmoji('🦑')">🦑</div>
+    <div class="emoji" data-keywords="shrimp sea animal" onclick="copyEmoji('🦐')">🦐</div>
+    <div class="emoji" data-keywords="lobster sea animal" onclick="copyEmoji('🦞')">🦞</div>
+    <div class="emoji" data-keywords="crab sea animal" onclick="copyEmoji('🦀')">🦀</div>
+    <div class="emoji" data-keywords="tropical fish" onclick="copyEmoji('🐠')">🐠</div>
+    <div class="emoji" data-keywords="fish" onclick="copyEmoji('🐟')">🐟</div>
+    <div class="emoji" data-keywords="pufferfish" onclick="copyEmoji('🐡')">🐡</div>
+    <div class="emoji" data-keywords="dolphin sea animal" onclick="copyEmoji('🐬')">🐬</div>
+    <div class="emoji" data-keywords="whale sea animal" onclick="copyEmoji('🐳')">🐳</div>
+    <div class="emoji" data-keywords="whale sea animal" onclick="copyEmoji('🐋')">🐋</div>
+    <div class="emoji" data-keywords="shark sea animal" onclick="copyEmoji('🦈')">🦈</div>
+    <div class="emoji" data-keywords="crocodile reptile" onclick="copyEmoji('🐊')">🐊</div>
+    <div class="emoji" data-keywords="tiger animal wild" onclick="copyEmoji('🐅')">🐅</div>
+    <div class="emoji" data-keywords="leopard animal wild" onclick="copyEmoji('🐆')">🐆</div>
+    <div class="emoji" data-keywords="zebra animal" onclick="copyEmoji('🦓')">🦓</div>
+    <div class="emoji" data-keywords="gorilla ape animal" onclick="copyEmoji('🦍')">🦍</div>
+    <div class="emoji" data-keywords="orangutan ape" onclick="copyEmoji('🦧')">🦧</div>
+    <div class="emoji" data-keywords="mammoth extinct animal" onclick="copyEmoji('🦣')">🦣</div>
+    <div class="emoji" data-keywords="elephant animal" onclick="copyEmoji('🐘')">🐘</div>
+    <div class="emoji" data-keywords="bison animal" onclick="copyEmoji('🦬')">🦬</div>
+    <div class="emoji" data-keywords="water buffalo animal" onclick="copyEmoji('🐃')">🐃</div>
+    <div class="emoji" data-keywords="ox animal" onclick="copyEmoji('🐂')">🐂</div>
+    <div class="emoji" data-keywords="cow animal" onclick="copyEmoji('🐄')">🐄</div>
+    <div class="emoji" data-keywords="deer animal" onclick="copyEmoji('🦌')">🦌</div>
+    <div class="emoji" data-keywords="dromedary camel" onclick="copyEmoji('🐪')">🐪</div>
+    <div class="emoji" data-keywords="bactrian camel" onclick="copyEmoji('🐫')">🐫</div>
+    <div class="emoji" data-keywords="llama animal" onclick="copyEmoji('🦙')">🦙</div>
+    <div class="emoji" data-keywords="giraffe animal" onclick="copyEmoji('🦒')">🦒</div>
+    <div class="emoji" data-keywords="ram animal" onclick="copyEmoji('🐏')">🐏</div>
+    <div class="emoji" data-keywords="sheep animal" onclick="copyEmoji('🐑')">🐑</div>
+    <div class="emoji" data-keywords="goat animal" onclick="copyEmoji('🐐')">🐐</div>
+    <div class="emoji" data-keywords="horse animal" onclick="copyEmoji('🐎')">🐎</div>
+    <div class="emoji" data-keywords="pig animal" onclick="copyEmoji('🐖')">🐖</div>
+    <div class="emoji" data-keywords="rat rodent" onclick="copyEmoji('🐀')">🐀</div>
+    <div class="emoji" data-keywords="mouse rodent" onclick="copyEmoji('🐁')">🐁</div>
+    <div class="emoji" data-keywords="rooster chicken" onclick="copyEmoji('🐓')">🐓</div>
+    <div class="emoji" data-keywords="turkey bird" onclick="copyEmoji('🦃')">🦃</div>
+    <div class="emoji" data-keywords="dove bird peace" onclick="copyEmoji('🕊️')">🕊️</div>
+    <div class="emoji" data-keywords="feather bird" onclick="copyEmoji('🪶')">🪶</div>
+    <div class="emoji" data-keywords="dog pet" onclick="copyEmoji('🐕')">🐕</div>
+    <div class="emoji" data-keywords="poodle dog" onclick="copyEmoji('🐩')">🐩</div>
+    <div class="emoji" data-keywords="cat pet" onclick="copyEmoji('🐈')">🐈</div>
+    <div class="emoji" data-keywords="black cat" onclick="copyEmoji('🐈‍⬛')">🐈‍⬛</div>
+    <div class="emoji" data-keywords="rabbit bunny" onclick="copyEmoji('🐇')">🐇</div>
+    <div class="emoji" data-keywords="raccoon animal" onclick="copyEmoji('🦝')">🦝</div>
+    <div class="emoji" data-keywords="skunk animal" onclick="copyEmoji('🦨')">🦨</div>
+    <div class="emoji" data-keywords="badger animal" onclick="copyEmoji('🦡')">🦡</div>
+    <div class="emoji" data-keywords="beaver animal" onclick="copyEmoji('🦫')">🦫</div>
+    <div class="emoji" data-keywords="hedgehog animal" onclick="copyEmoji('🦔')">🦔</div>
+    <div class="emoji" data-keywords="paw prints animal" onclick="copyEmoji('🐾')">🐾</div>
+    <div class="emoji" data-keywords="dragon mythical" onclick="copyEmoji('🐉')">🐉</div>
+    <div class="emoji" data-keywords="dragon mythical" onclick="copyEmoji('🐲')">🐲</div>
+    <div class="emoji" data-keywords="sauropod dinosaur" onclick="copyEmoji('🦕')">🦕</div>
+    <div class="emoji" data-keywords="t-rex dinosaur" onclick="copyEmoji('🦖')">🦖</div>
   </div>
+
+  <div class="category">
+    <h2>😎 People</h2>
+  <div class="emoji" data-keywords="grinning face happy smile" onclick="copyEmoji('😀')">😀</div>
+  <div class="emoji" data-keywords="grinning face big eyes happy" onclick="copyEmoji('😃')">😃</div>
+  <div class="emoji" data-keywords="grinning face smiling eyes happy" onclick="copyEmoji('😄')">😄</div>
+  <div class="emoji" data-keywords="beaming face smiling eyes happy" onclick="copyEmoji('😁')">😁</div>
+  <div class="emoji" data-keywords="grinning squinting face laugh" onclick="copyEmoji('😆')">😆</div>
+  <div class="emoji" data-keywords="grinning face sweat nervous" onclick="copyEmoji('😅')">😅</div>
+  <div class="emoji" data-keywords="face tears joy lol" onclick="copyEmoji('😂')">😂</div>
+  <div class="emoji" data-keywords="rolling floor laughing rofl" onclick="copyEmoji('🤣')">🤣</div>
+  <div class="emoji" data-keywords="slightly smiling face" onclick="copyEmoji('🙂')">🙂</div>
+  <div class="emoji" data-keywords="upside down face silly" onclick="copyEmoji('🙃')">🙃</div>
+  <div class="emoji" data-keywords="winking face wink" onclick="copyEmoji('😉')">😉</div>
+  <div class="emoji" data-keywords="smiling face smiling eyes" onclick="copyEmoji('😊')">😊</div>
+  <div class="emoji" data-keywords="smiling face halo angel" onclick="copyEmoji('😇')">😇</div>
+  <div class="emoji" data-keywords="smiling face hearts in love" onclick="copyEmoji('🥰')">🥰</div>
+  <div class="emoji" data-keywords="smiling face heart eyes love" onclick="copyEmoji('😍')">😍</div>
+  <div class="emoji" data-keywords="star struck star eyes" onclick="copyEmoji('🤩')">🤩</div>
+  <div class="emoji" data-keywords="face blowing kiss" onclick="copyEmoji('😘')">😘</div>
+  <div class="emoji" data-keywords="kissing face" onclick="copyEmoji('😗')">😗</div>
+  <div class="emoji" data-keywords="kissing face smiling eyes" onclick="copyEmoji('😙')">😙</div>
+  <div class="emoji" data-keywords="kissing face closed eyes" onclick="copyEmoji('😚')">😚</div>
+  <div class="emoji" data-keywords="smiling face tongue yummy" onclick="copyEmoji('😋')">😋</div>
+  <div class="emoji" data-keywords="winking face tongue playful" onclick="copyEmoji('😜')">😜</div>
+  <div class="emoji" data-keywords="squinting face tongue crazy" onclick="copyEmoji('😝')">😝</div>
+  <div class="emoji" data-keywords="zany face crazy" onclick="copyEmoji('🤪')">🤪</div>
+  <div class="emoji" data-keywords="face with tongue silly" onclick="copyEmoji('😛')">😛</div>
+  <div class="emoji" data-keywords="smiling face sunglasses cool" onclick="copyEmoji('😎')">😎</div>
+  <div class="emoji" data-keywords="smirking face smirk" onclick="copyEmoji('😏')">😏</div>
+  <div class="emoji" data-keywords="expressionless face blank" onclick="copyEmoji('😑')">😑</div>
+  <div class="emoji" data-keywords="neutral face meh" onclick="copyEmoji('😐')">😐</div>
+  <div class="emoji" data-keywords="face without mouth mute" onclick="copyEmoji('😶')">😶</div>
+  <div class="emoji" data-keywords="face rolling eyes annoyed" onclick="copyEmoji('🙄')">🙄</div>
+  <div class="emoji" data-keywords="thinking face think" onclick="copyEmoji('🤔')">🤔</div>
+  <div class="emoji" data-keywords="shushing face quiet" onclick="copyEmoji('🤫')">🤫</div>
+  <div class="emoji" data-keywords="zipper mouth secret" onclick="copyEmoji('🤐')">🤐</div>
+  <div class="emoji" data-keywords="face with raised eyebrow skeptic" onclick="copyEmoji('🤨')">🤨</div>
+  <div class="emoji" data-keywords="neutral face unamused" onclick="copyEmoji('😒')">😒</div>
+  <div class="emoji" data-keywords="confused face" onclick="copyEmoji('😕')">😕</div>
+  <div class="emoji" data-keywords="slightly frowning face" onclick="copyEmoji('☹️')">☹️</div>
+  <div class="emoji" data-keywords="frowning face" onclick="copyEmoji('🙁')">🙁</div>
+  <div class="emoji" data-keywords="persevering face" onclick="copyEmoji('😣')">😣</div>
+  <div class="emoji" data-keywords="confounded face" onclick="copyEmoji('😖')">😖</div>
+  <div class="emoji" data-keywords="worried face" onclick="copyEmoji('😟')">😟</div>
+  <div class="emoji" data-keywords="slightly sad disappointed" onclick="copyEmoji('😞')">😞</div>
+  <div class="emoji" data-keywords="pensive face sad" onclick="copyEmoji('😔')">😔</div>
+  <div class="emoji" data-keywords="sad relieved face" onclick="copyEmoji('😥')">😥</div>
+  <div class="emoji" data-keywords="crying face" onclick="copyEmoji('😢')">😢</div>
+  <div class="emoji" data-keywords="loudly crying face" onclick="copyEmoji('😭')">😭</div>
+  <div class="emoji" data-keywords="weary face tired" onclick="copyEmoji('😩')">😩</div>
+  <div class="emoji" data-keywords="tired face exhausted" onclick="copyEmoji('😫')">😫</div>
+  <div class="emoji" data-keywords="pleading face puppy eyes" onclick="copyEmoji('🥺')">🥺</div>
+  <div class="emoji" data-keywords="angry face mad" onclick="copyEmoji('😠')">😠</div>
+  <div class="emoji" data-keywords="pouting face very angry" onclick="copyEmoji('😡')">😡</div>
+  <div class="emoji" data-keywords="face symbols mouth swearing" onclick="copyEmoji('🤬')">🤬</div>
+  <div class="emoji" data-keywords="face steam nose triumph" onclick="copyEmoji('😤')">😤</div>
+  <div class="emoji" data-keywords="face screaming fear scared" onclick="copyEmoji('😱')">😱</div>
+  <div class="emoji" data-keywords="fearful face scared" onclick="copyEmoji('😨')">😨</div>
+  <div class="emoji" data-keywords="anxious face sweat worried" onclick="copyEmoji('😰')">😰</div>
+  <div class="emoji" data-keywords="face open mouth surprised" onclick="copyEmoji('😮')">😮</div>
+  <div class="emoji" data-keywords="hushed face surprised" onclick="copyEmoji('😯')">😯</div>
+  <div class="emoji" data-keywords="astonished face shocked" onclick="copyEmoji('😲')">😲</div>
+  <div class="emoji" data-keywords="flushed face embarrassed" onclick="copyEmoji('😳')">😳</div>
+  <div class="emoji" data-keywords="face with diagonal mouth unsure" onclick="copyEmoji('🫤')">🫤</div>
+  <div class="emoji" data-keywords="face with peeking eye shy" onclick="copyEmoji('🫣')">🫣</div>
+  <div class="emoji" data-keywords="face with monocle inspect" onclick="copyEmoji('🧐')">🧐</div>
+  <div class="emoji" data-keywords="woozy face drunk dizzy" onclick="copyEmoji('🥴')">🥴</div>
+  <div class="emoji" data-keywords="dizzy face" onclick="copyEmoji('😵')">😵</div>
+  <div class="emoji" data-keywords="face with spiral eyes dizzy" onclick="copyEmoji('😵‍💫')">😵‍💫</div>
+  <div class="emoji" data-keywords="exploding head mind blown" onclick="copyEmoji('🤯')">🤯</div>
+  <div class="emoji" data-keywords="sleeping face" onclick="copyEmoji('😴')">😴</div>
+  <div class="emoji" data-keywords="sleepy face" onclick="copyEmoji('😪')">😪</div>
+  <div class="emoji" data-keywords="yawning face" onclick="copyEmoji('🥱')">🥱</div>
+  <div class="emoji" data-keywords="drooling face" onclick="copyEmoji('🤤')">🤤</div>
+
+  <!-- Sick / medical -->
+  <div class="emoji" data-keywords="face medical mask sick" onclick="copyEmoji('😷')">😷</div>
+  <div class="emoji" data-keywords="face thermometer sick" onclick="copyEmoji('🤒')">🤒</div>
+  <div class="emoji" data-keywords="face head bandage injury" onclick="copyEmoji('🤕')">🤕</div>
+  <div class="emoji" data-keywords="nauseated face sick" onclick="copyEmoji('🤢')">🤢</div>
+  <div class="emoji" data-keywords="face vomiting" onclick="copyEmoji('🤮')">🤮</div>
+  <div class="emoji" data-keywords="sneezing face sick" onclick="copyEmoji('🤧')">🤧</div>
+  <div class="emoji" data-keywords="hot face heat" onclick="copyEmoji('🥵')">🥵</div>
+  <div class="emoji" data-keywords="cold face freezing" onclick="copyEmoji('🥶')">🥶</div>
+
+  <!-- Money / party -->
+  <div class="emoji" data-keywords="money mouth face rich" onclick="copyEmoji('🤑')">🤑</div>
+  <div class="emoji" data-keywords="party face celebration" onclick="copyEmoji('🥳')">🥳</div>
+  <div class="emoji" data-keywords="cowboy hat face" onclick="copyEmoji('🤠')">🤠</div>
+  <div class="emoji" data-keywords="disguised face glasses fake" onclick="copyEmoji('🥸')">🥸</div>
+
+  <!-- Creatures / masks -->
+  <div class="emoji" data-keywords="smiling face horns devil" onclick="copyEmoji('😈')">😈</div>
+  <div class="emoji" data-keywords="angry face horns devil" onclick="copyEmoji('👿')">👿</div>
+  <div class="emoji" data-keywords="ogre monster" onclick="copyEmoji('👹')">👹</div>
+  <div class="emoji" data-keywords="goblin monster" onclick="copyEmoji('👺')">👺</div>
+  <div class="emoji" data-keywords="clown face" onclick="copyEmoji('🤡')">🤡</div>
+  <div class="emoji" data-keywords="ghost spooky" onclick="copyEmoji('👻')">👻</div>
+  <div class="emoji" data-keywords="skull death" onclick="copyEmoji('💀')">💀</div>
+  <div class="emoji" data-keywords="skull crossbones danger" onclick="copyEmoji('☠️')">☠️</div>
+  <div class="emoji" data-keywords="alien ufo" onclick="copyEmoji('👽')">👽</div>
+  <div class="emoji" data-keywords="alien monster" onclick="copyEmoji('👾')">👾</div>
+  <div class="emoji" data-keywords="robot face" onclick="copyEmoji('🤖')">🤖</div>
+
+  <!-- Hearts / symbols often used as people emotion -->
+  <div class="emoji" data-keywords="red heart love" onclick="copyEmoji('❤️')">❤️</div>
+  <div class="emoji" data-keywords="orange heart love" onclick="copyEmoji('🧡')">🧡</div>
+  <div class="emoji" data-keywords="yellow heart love" onclick="copyEmoji('💛')">💛</div>
+  <div class="emoji" data-keywords="green heart love" onclick="copyEmoji('💚')">💚</div>
+  <div class="emoji" data-keywords="blue heart love" onclick="copyEmoji('💙')">💙</div>
+  <div class="emoji" data-keywords="purple heart love" onclick="copyEmoji('💜')">💜</div>
+  <div class="emoji" data-keywords="brown heart love" onclick="copyEmoji('🤎')">🤎</div>
+  <div class="emoji" data-keywords="black heart" onclick="copyEmoji('🖤')">🖤</div>
+  <div class="emoji" data-keywords="white heart" onclick="copyEmoji('🤍')">🤍</div>
+  <div class="emoji" data-keywords="sparkling heart" onclick="copyEmoji('💖')">💖</div>
+  <div class="emoji" data-keywords="growing heart" onclick="copyEmoji('💗')">💗</div>
+  <div class="emoji" data-keywords="beating heart" onclick="copyEmoji('💓')">💓</div>
+  <div class="emoji" data-keywords="two hearts" onclick="copyEmoji('💕')">💕</div>
+  <div class="emoji" data-keywords="revolving hearts" onclick="copyEmoji('💞')">💞</div>
+  <div class="emoji" data-keywords="heart exclamation" onclick="copyEmoji('❣️')">❣️</div>
+  <div class="emoji" data-keywords="broken heart" onclick="copyEmoji('💔')">💔</div>
+</div>
+  </div>
+
+<div class="category">
+  <h2>🖐️ Hands & Gestures</h2>
+
+  <!-- Basic hands -->
+  <div class="emoji" data-keywords="waving hand hello goodbye hi bye" onclick="copyEmoji('👋')">👋</div>
+  <div class="emoji" data-keywords="raised back of hand" onclick="copyEmoji('🤚')">🤚</div>
+  <div class="emoji" data-keywords="hand with fingers splayed" onclick="copyEmoji('🖐️')">🖐️</div>
+  <div class="emoji" data-keywords="raised hand stop high five" onclick="copyEmoji('✋')">✋</div>
+  <div class="emoji" data-keywords="vulcan salute live long prosper" onclick="copyEmoji('🖖')">🖖</div>
+
+  <!-- Pointing -->
+  <div class="emoji" data-keywords="backhand index pointing left" onclick="copyEmoji('👈')">👈</div>
+  <div class="emoji" data-keywords="backhand index pointing right" onclick="copyEmoji('👉')">👉</div>
+  <div class="emoji" data-keywords="backhand index pointing up" onclick="copyEmoji('👆')">👆</div>
+  <div class="emoji" data-keywords="backhand index pointing down" onclick="copyEmoji('👇')">👇</div>
+  <div class="emoji" data-keywords="index pointing up" onclick="copyEmoji('☝️')">☝️</div>
+  <div class="emoji" data-keywords="index pointing at viewer you" onclick="copyEmoji('🫵')">🫵</div>
+
+  <!-- Thumbs / ok -->
+  <div class="emoji" data-keywords="thumbs up like approve" onclick="copyEmoji('👍')">👍</div>
+  <div class="emoji" data-keywords="thumbs down dislike" onclick="copyEmoji('👎')">👎</div>
+  <div class="emoji" data-keywords="ok hand perfect" onclick="copyEmoji('👌')">👌</div>
+  <div class="emoji" data-keywords="pinched fingers italian hand" onclick="copyEmoji('🤌')">🤌</div>
+  <div class="emoji" data-keywords="pinching hand small tiny" onclick="copyEmoji('🤏')">🤏</div>
+
+  <!-- Fists -->
+  <div class="emoji" data-keywords="oncoming fist punch" onclick="copyEmoji('👊')">👊</div>
+  <div class="emoji" data-keywords="left facing fist fist bump" onclick="copyEmoji('🤛')">🤛</div>
+  <div class="emoji" data-keywords="right facing fist fist bump" onclick="copyEmoji('🤜')">🤜</div>
+
+  <!-- Love / peace / rock -->
+  <div class="emoji" data-keywords="victory hand peace sign" onclick="copyEmoji('✌️')">✌️</div>
+  <div class="emoji" data-keywords="crossed fingers good luck" onclick="copyEmoji('🤞')">🤞</div>
+  <div class="emoji" data-keywords="sign of the horns rock on" onclick="copyEmoji('🤘')">🤘</div>
+  <div class="emoji" data-keywords="love you gesture i love you" onclick="copyEmoji('🤟')">🤟</div>
+  <div class="emoji" data-keywords="heart hands love" onclick="copyEmoji('🫶')">🫶</div>
+
+  <!-- Praying / clapping / open -->
+  <div class="emoji" data-keywords="folded hands pray please thank you" onclick="copyEmoji('🙏')">🙏</div>
+  <div class="emoji" data-keywords="clapping hands applause bravo" onclick="copyEmoji('👏')">👏</div>
+  <div class="emoji" data-keywords="raising hands celebration yay" onclick="copyEmoji('🙌')">🙌</div>
+  <div class="emoji" data-keywords="open hands hug giving" onclick="copyEmoji('👐')">👐</div>
+  <div class="emoji" data-keywords="palms up together offering" onclick="copyEmoji('🤲')">🤲</div>
+  <div class="emoji" data-keywords="handshake agreement deal" onclick="copyEmoji('🤝')">🤝</div>
+
+  <!-- Directional palms -->
+  <div class="emoji" data-keywords="palm facing up" onclick="copyEmoji('🫴')">🫴</div>
+  <div class="emoji" data-keywords="palm facing right" onclick="copyEmoji('🫱')">🫱</div>
+  <div class="emoji" data-keywords="palm facing left" onclick="copyEmoji('🫲')">🫲</div>
+
+  <!-- Writing / nails / care -->
+  <div class="emoji" data-keywords="writing hand" onclick="copyEmoji('✍️')">✍️</div>
+  <div class="emoji" data-keywords="nail polish manicure" onclick="copyEmoji('💅')">💅</div>
+  <div class="emoji" data-keywords="flexed biceps strong muscle" onclick="copyEmoji('💪')">💪</div>
+
+  <!-- Rude / special -->
+  <div class="emoji" data-keywords="middle finger rude" onclick="copyEmoji('🖕')">🖕</div>
 </div>
 
-<div class="deck-wrapper" id="deck-wrapper">
-  <div class="deck crt-layer" id="screen">
-    <canvas id="matrix"></canvas>
-    <div class="particle-layer" id="particle-layer"></div>
+<div class="category">
+  <h2>💪 Body Parts</h2>
 
-    <div id="terminal-wrap">
-      <div id="terminal-header">
-        <div class="header-left">
-          <span class="header-led"></span>
-          <span>BANKHACK · INTRUSION CORE</span>
-        </div>
-        <span class="badge">IDLE · LOCKED</span>
-      </div>
-      <div id="terminal"></div>
-      <div class="flash-overlay" id="flash"></div>
-    </div>
+  <!-- Core body parts -->
+  <div class="emoji" data-keywords="flexed biceps arm muscle strong strength gym" onclick="copyEmoji('💪')">💪</div>
+  <div class="emoji" data-keywords="mechanical arm prosthetic robot cyber arm" onclick="copyEmoji('🦾')">🦾</div>
+  <div class="emoji" data-keywords="mechanical leg prosthetic robot cyber leg" onclick="copyEmoji('🦿')">🦿</div>
+  <div class="emoji" data-keywords="leg body part running walking" onclick="copyEmoji('🦵')">🦵</div>
+  <div class="emoji" data-keywords="foot body part walking" onclick="copyEmoji('🦶')">🦶</div>
 
-    <aside id="hud">
-      <div class="logo-wrap">
-        <div class="glitch" data-text="BankHack">BankHack</div>
-      </div>
+  <!-- Head / senses -->
+  <div class="emoji" data-keywords="ear hear listening" onclick="copyEmoji('👂')">👂</div>
+  <div class="emoji" data-keywords="ear with hearing aid deaf hearing aid" onclick="copyEmoji('🦻')">🦻</div>
+  <div class="emoji" data-keywords="nose smell sniff" onclick="copyEmoji('👃')">👃</div>
+  <div class="emoji" data-keywords="eyes look watching see" onclick="copyEmoji('👀')">👀</div>
+  <div class="emoji" data-keywords="eye look see" onclick="copyEmoji('👁️')">👁️</div>
+  <div class="emoji" data-keywords="tongue taste lick" onclick="copyEmoji('👅')">👅</div>
+  <div class="emoji" data-keywords="mouth lips talk speak eat" onclick="copyEmoji('👄')">👄</div>
+  <div class="emoji" data-keywords="biting lip lips nervous flirty" onclick="copyEmoji('🫦')">🫦</div>
 
-      <div class="hud-section">
-        <div class="hud-title">BREACH STATUS</div>
-        <div class="hud-kv"><span>target</span><span>secure-bank.gov</span></div>
-        <div class="hud-kv"><span>accounts</span><span id="hud-accounts">0/∞</span></div>
-        <div class="hud-kv"><span>vault</span><span id="hud-vault">LOCKED</span></div>
-        <div class="hud-bar">
-          <div class="hud-bar-fill" id="hud-load"></div>
-        </div>
-      </div>
+  <!-- Organs / inside -->
+  <div class="emoji" data-keywords="brain mind smart thinking" onclick="copyEmoji('🧠')">🧠</div>
+  <div class="emoji" data-keywords="anatomical heart organ" onclick="copyEmoji('🫀')">🫀</div>
+  <div class="emoji" data-keywords="lungs breathing organ" onclick="copyEmoji('🫁')">🫁</div>
 
-      <div class="hud-section">
-        <div class="hud-title">FUNDS TELEMETRY</div>
-        <div class="hud-kv"><span>cluster</span><span>bank://vault-alpha</span></div>
-        <div class="hud-kv"><span>shard</span><span>RBT-BANK13</span></div>
-        <div class="hud-kv"><span>balance</span><span id="hud-balance">$0.00</span></div>
-        <div class="hud-dots" id="hud-dots">
-          <span class="hud-dot active"></span>
-          <span class="hud-dot active"></span>
-          <span class="hud-dot"></span>
-          <span class="hud-dot"></span>
-        </div>
-      </div>
-
-      <div class="hud-section">
-        <div class="hud-title">EXTRACTION</div>
-        <div class="hud-kv"><span>vector</span><span id="hud-vector">SQLi · ID59353</span></div>
-        <div class="hud-kv"><span>signature</span><span>R-0xCASHGRAB</span></div>
-        <div class="hud-kv"><span>stolen</span><span id="hud-stolen">$0</span></div>
-      </div>
-
-      <div class="hud-footer">
-        LOGIN TO ARM · THEN SPAM KEYS
-      </div>
-    </aside>
-  </div>
+  <!-- Bones / teeth -->
+  <div class="emoji" data-keywords="tooth dental teeth" onclick="copyEmoji('🦷')">🦷</div>
+  <div class="emoji" data-keywords="bone skeleton" onclick="copyEmoji('🦴')">🦴</div>
 </div>
 
-<script>
-  // MATRIX
-  const matrixCanvas = document.getElementById('matrix');
-  const mtx = matrixCanvas.getContext('2d');
-  const matrixChars = '01█▓░#/*=+<>'.split('');
-  let drops = [];
-  let fontSize = 16;
+<div class="category">
+  <h2>🔷 Shapes & Squares</h2>
 
-  function resizeMatrix() {
-    matrixCanvas.width = matrixCanvas.clientWidth;
-    matrixCanvas.height = matrixCanvas.clientHeight;
-    const columns = Math.floor(matrixCanvas.width / fontSize);
-    drops = Array(columns).fill(0);
-  }
+  <!-- Big colored squares -->
+  <div class="emoji" data-keywords="blue square shape" onclick="copyEmoji('🟦')">🟦</div>
+  <div class="emoji" data-keywords="red square shape" onclick="copyEmoji('🟥')">🟥</div>
+  <div class="emoji" data-keywords="yellow square shape" onclick="copyEmoji('🟨')">🟨</div>
+  <div class="emoji" data-keywords="green square shape" onclick="copyEmoji('🟩')">🟩</div>
+  <div class="emoji" data-keywords="purple square shape" onclick="copyEmoji('🟪')">🟪</div>
+  <div class="emoji" data-keywords="brown square shape" onclick="copyEmoji('🟫')">🟫</div>
+  <div class="emoji" data-keywords="black large square shape" onclick="copyEmoji('⬛')">⬛</div>
+  <div class="emoji" data-keywords="white large square shape" onclick="copyEmoji('⬜')">⬜</div>
 
-  window.addEventListener('resize', resizeMatrix);
-  resizeMatrix();
+  <!-- Small squares / buttons -->
+  <div class="emoji" data-keywords="black small square bullet" onclick="copyEmoji('▪️')">▪️</div>
+  <div class="emoji" data-keywords="white small square bullet" onclick="copyEmoji('▫️')">▫️</div>
+  <div class="emoji" data-keywords="blue square button ui" onclick="copyEmoji('🔵')">🔵</div>
+  <div class="emoji" data-keywords="red square button ui" onclick="copyEmoji('🔴')">🔴</div>
+  <div class="emoji" data-keywords="white square button ui" onclick="copyEmoji('🔳')">🔳</div>
+  <div class="emoji" data-keywords="black square button ui" onclick="copyEmoji('🔲')">🔲</div>
 
-  function drawMatrix() {
-    mtx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-    mtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+  <!-- Circles -->
+  <div class="emoji" data-keywords="blue circle dot" onclick="copyEmoji('🔵')">🔵</div>
+  <div class="emoji" data-keywords="red circle dot" onclick="copyEmoji('🔴')">🔴</div>
+  <div class="emoji" data-keywords="yellow circle dot" onclick="copyEmoji('🟡')">🟡</div>
+  <div class="emoji" data-keywords="green circle dot" onclick="copyEmoji('🟢')">🟢</div>
+  <div class="emoji" data-keywords="purple circle dot" onclick="copyEmoji('🟣')">🟣</div>
+  <div class="emoji" data-keywords="brown circle dot" onclick="copyEmoji('🟤')">🟤</div>
+  <div class="emoji" data-keywords="white circle hollow" onclick="copyEmoji('⚪')">⚪</div>
+  <div class="emoji" data-keywords="black circle solid" onclick="copyEmoji('⚫')">⚫</div>
 
-    mtx.fillStyle = '#0f5';
-    mtx.font = fontSize + 'px Courier New';
+  <!-- Diamonds -->
+  <div class="emoji" data-keywords="large blue diamond shape" onclick="copyEmoji('🔷')">🔷</div>
+  <div class="emoji" data-keywords="large orange diamond shape" onclick="copyEmoji('🔶')">🔶</div>
+  <div class="emoji" data-keywords="small blue diamond shape" onclick="copyEmoji('🔹')">🔹</div>
+  <div class="emoji" data-keywords="small orange diamond shape" onclick="copyEmoji('🔸')">🔸</div>
+  <div class="emoji" data-keywords="diamond suit card" onclick="copyEmoji('♦️')">♦️</div>
 
-    for (let i = 0; i < drops.length; i++) {
-      const char = matrixChars[Math.floor(Math.random() * matrixChars.length)];
-      const x = i * fontSize;
-      const y = drops[i] * fontSize;
+  <!-- Triangles / arrows-like shapes -->
+  <div class="emoji" data-keywords="red triangle pointed up" onclick="copyEmoji('🔺')">🔺</div>
+  <div class="emoji" data-keywords="red triangle pointed down" onclick="copyEmoji('🔻')">🔻</div>
+  <div class="emoji" data-keywords="up pointing small red triangle" onclick="copyEmoji('🔼')">🔼</div>
+  <div class="emoji" data-keywords="down pointing small red triangle" onclick="copyEmoji('🔽')">🔽</div>
+  <div class="emoji" data-keywords="black small triangle left" onclick="copyEmoji('◀️')">◀️</div>
+  <div class="emoji" data-keywords="black small triangle right" onclick="copyEmoji('▶️')">▶️</div>
 
-      mtx.fillText(char, x, y);
+  <!-- Squares with rounded/other -->
+  <div class="emoji" data-keywords="white square rounded corners" onclick="copyEmoji('▢')">▢</div>
+  <div class="emoji" data-keywords="white medium square" onclick="copyEmoji('◻️')">◻️</div>
+  <div class="emoji" data-keywords="black medium square" onclick="copyEmoji('◼️')">◼️</div>
+  <div class="emoji" data-keywords="white medium small square" onclick="copyEmoji('◽')">◽</div>
+  <div class="emoji" data-keywords="black medium small square" onclick="copyEmoji('◾')">◾</div>
+</div>
 
-      if (y > matrixCanvas.height && Math.random() > 0.97) {
-        drops[i] = 0;
+<div class="category">
+  <h2>♾️ Symbols</h2>
+
+  <!-- Arrows -->
+  <div class="emoji" data-keywords="right arrow" onclick="copyEmoji('➡️')">➡️</div>
+  <div class="emoji" data-keywords="left arrow" onclick="copyEmoji('⬅️')">⬅️</div>
+  <div class="emoji" data-keywords="up arrow" onclick="copyEmoji('⬆️')">⬆️</div>
+  <div class="emoji" data-keywords="down arrow" onclick="copyEmoji('⬇️')">⬇️</div>
+  <div class="emoji" data-keywords="up right arrow" onclick="copyEmoji('↗️')">↗️</div>
+  <div class="emoji" data-keywords="down right arrow" onclick="copyEmoji('↘️')">↘️</div>
+  <div class="emoji" data-keywords="down left arrow" onclick="copyEmoji('↙️')">↙️</div>
+  <div class="emoji" data-keywords="up left arrow" onclick="copyEmoji('↖️')">↖️</div>
+  <div class="emoji" data-keywords="right arrow curving left reply" onclick="copyEmoji('↩️')">↩️</div>
+  <div class="emoji" data-keywords="left arrow curving right share" onclick="copyEmoji('↪️')">↪️</div>
+  <div class="emoji" data-keywords="right arrow curving up" onclick="copyEmoji('⤴️')">⤴️</div>
+  <div class="emoji" data-keywords="right arrow curving down" onclick="copyEmoji('⤵️')">⤵️</div>
+  <div class="emoji" data-keywords="shuffle tracks arrows" onclick="copyEmoji('🔀')">🔀</div>
+  <div class="emoji" data-keywords="repeat arrows" onclick="copyEmoji('🔁')">🔁</div>
+  <div class="emoji" data-keywords="repeat single arrows" onclick="copyEmoji('🔂')">🔂</div>
+  <div class="emoji" data-keywords="clockwise arrows circle sync" onclick="copyEmoji('🔄')">🔄</div>
+  <div class="emoji" data-keywords="anticlockwise arrows circle" onclick="copyEmoji('🔃')">🔃</div>
+
+  <!-- Stars / sparkles -->
+  <div class="emoji" data-keywords="glowing star" onclick="copyEmoji('🌟')">🌟</div>
+  <div class="emoji" data-keywords="star" onclick="copyEmoji('⭐')">⭐</div>
+  <div class="emoji" data-keywords="sparkles magic shine" onclick="copyEmoji('✨')">✨</div>
+  <div class="emoji" data-keywords="dizzy symbol spark" onclick="copyEmoji('💫')">💫</div>
+  <div class="emoji" data-keywords="shooting star wish" onclick="copyEmoji('🌠')">🌠</div>
+
+  <!-- Check marks / crosses -->
+  <div class="emoji" data-keywords="check mark" onclick="copyEmoji('✔️')">✔️</div>
+  <div class="emoji" data-keywords="heavy check mark" onclick="copyEmoji('✅')">✅</div>
+  <div class="emoji" data-keywords="white heavy check mark" onclick="copyEmoji('☑️')">☑️</div>
+  <div class="emoji" data-keywords="cross mark" onclick="copyEmoji('❌')">❌</div>
+  <div class="emoji" data-keywords="cross mark button" onclick="copyEmoji('✖️')">✖️</div>
+  <div class="emoji" data-keywords="negative squared cross mark" onclick="copyEmoji('🟥')">🟥</div>
+  <div class="emoji" data-keywords="prohibited no symbol" onclick="copyEmoji('🚫')">🚫</div>
+  <div class="emoji" data-keywords="no entry" onclick="copyEmoji('⛔')">⛔</div>
+
+  <!-- Info / warning -->
+  <div class="emoji" data-keywords="warning sign" onclick="copyEmoji('⚠️')">⚠️</div>
+  <div class="emoji" data-keywords="children crossing" onclick="copyEmoji('🚸')">🚸</div>
+  <div class="emoji" data-keywords="no pedestrians" onclick="copyEmoji('🚷')">🚷</div>
+  <div class="emoji" data-keywords="no bicycles" onclick="copyEmoji('🚳')">🚳</div>
+  <div class="emoji" data-keywords="radioactive" onclick="copyEmoji('☢️')">☢️</div>
+  <div class="emoji" data-keywords="biohazard" onclick="copyEmoji('☣️')">☣️</div>
+  <div class="emoji" data-keywords="information source" onclick="copyEmoji('ℹ️')">ℹ️</div>
+  <div class="emoji" data-keywords="exclamation mark" onclick="copyEmoji('❗')">❗</div>
+  <div class="emoji" data-keywords="double exclamation" onclick="copyEmoji('‼️')">‼️</div>
+  <div class="emoji" data-keywords="question mark" onclick="copyEmoji('❓')">❓</div>
+  <div class="emoji" data-keywords="white question mark" onclick="copyEmoji('❔')">❔</div>
+  <div class="emoji" data-keywords="white exclamation" onclick="copyEmoji('❕')">❕</div>
+  <div class="emoji" data-keywords="exclamation question interrobang" onclick="copyEmoji('⁉️')">⁉️</div>
+
+  <!-- Time / clocks -->
+  <div class="emoji" data-keywords="alarm clock" onclick="copyEmoji('⏰')">⏰</div>
+  <div class="emoji" data-keywords="stopwatch" onclick="copyEmoji('⏱️')">⏱️</div>
+  <div class="emoji" data-keywords="timer clock" onclick="copyEmoji('⏲️')">⏲️</div>
+  <div class="emoji" data-keywords="mantelpiece clock" onclick="copyEmoji('🕰️')">🕰️</div>
+  <div class="emoji" data-keywords="hourglass done" onclick="copyEmoji('⌛')">⌛</div>
+  <div class="emoji" data-keywords="hourglass not done" onclick="copyEmoji('⏳')">⏳</div>
+  <div class="emoji" data-keywords="watch wristwatch" onclick="copyEmoji('⌚')">⌚</div>
+
+  <!-- Weather / misc symbols that feel symbolic -->
+  <div class="emoji" data-keywords="cyclone swirl" onclick="copyEmoji('🌀')">🌀</div>
+  <div class="emoji" data-keywords="black sun rays" onclick="copyEmoji('☀️')">☀️</div>
+  <div class="emoji" data-keywords="cloud" onclick="copyEmoji('☁️')">☁️</div>
+  <div class="emoji" data-keywords="high voltage lightning" onclick="copyEmoji('⚡')">⚡</div>
+  <div class="emoji" data-keywords="snowflake" onclick="copyEmoji('❄️')">❄️</div>
+  <div class="emoji" data-keywords="comet" onclick="copyEmoji('☄️')">☄️</div>
+
+  <!-- Music / sound -->
+  <div class="emoji" data-keywords="musical note" onclick="copyEmoji('🎵')">🎵</div>
+  <div class="emoji" data-keywords="musical notes" onclick="copyEmoji('🎶')">🎶</div>
+  <div class="emoji" data-keywords="mute speaker" onclick="copyEmoji('🔇')">🔇</div>
+  <div class="emoji" data-keywords="speaker low volume" onclick="copyEmoji('🔈')">🔈</div>
+  <div class="emoji" data-keywords="speaker medium volume" onclick="copyEmoji('🔉')">🔉</div>
+  <div class="emoji" data-keywords="speaker high volume" onclick="copyEmoji('🔊')">🔊</div>
+  <div class="emoji" data-keywords="loudspeaker announcement" onclick="copyEmoji('📢')">📢</div>
+  <div class="emoji" data-keywords="megaphone" onclick="copyEmoji('📣')">📣</div>
+  <div class="emoji" data-keywords="bell" onclick="copyEmoji('🔔')">🔔</div>
+  <div class="emoji" data-keywords="bell with slash silent" onclick="copyEmoji('🔕')">🔕</div>
+
+  <!-- Locks / security -->
+  <div class="emoji" data-keywords="locked" onclick="copyEmoji('🔒')">🔒</div>
+  <div class="emoji" data-keywords="unlocked" onclick="copyEmoji('🔓')">🔓</div>
+  <div class="emoji" data-keywords="locked with pen" onclick="copyEmoji('🔏')">🔏</div>
+  <div class="emoji" data-keywords="locked with key" onclick="copyEmoji('🔐')">🔐</div>
+  <div class="emoji" data-keywords="key" onclick="copyEmoji('🔑')">🔑</div>
+  <div class="emoji" data-keywords="old key" onclick="copyEmoji('🗝️')">🗝️</div>
+
+  <!-- Currency / numbers -->
+  <div class="emoji" data-keywords="dollar banknote money" onclick="copyEmoji('💵')">💵</div>
+  <div class="emoji" data-keywords="euro banknote" onclick="copyEmoji('💶')">💶</div>
+  <div class="emoji" data-keywords="pound banknote" onclick="copyEmoji('💷')">💷</div>
+  <div class="emoji" data-keywords="yen banknote" onclick="copyEmoji('💴')">💴</div>
+  <div class="emoji" data-keywords="heavy dollar sign" onclick="copyEmoji('💲')">💲</div>
+  <div class="emoji" data-keywords="currency exchange" onclick="copyEmoji('💱')">💱</div>
+  <div class="emoji" data-keywords="input numbers" onclick="copyEmoji('🔢')">🔢</div>
+  <div class="emoji" data-keywords="1234 input" onclick="copyEmoji('🔢')">🔢</div>
+
+  <!-- Misc UI icons -->
+  <div class="emoji" data-keywords="gear settings cog" onclick="copyEmoji('⚙️')">⚙️</div>
+  <div class="emoji" data-keywords="wrench tool" onclick="copyEmoji('🔧')">🔧</div>
+  <div class="emoji" data-keywords="hammer tool" onclick="copyEmoji('🔨')">🔨</div>
+  <div class="emoji" data-keywords="link symbol" onclick="copyEmoji('🔗')">🔗</div>
+  <div class="emoji" data-keywords="paperclip" onclick="copyEmoji('📎')">📎</div>
+  <div class="emoji" data-keywords="linked paperclips" onclick="copyEmoji('🖇️')">🖇️</div>
+  <div class="emoji" data-keywords="bookmark tabs" onclick="copyEmoji('📑')">📑</div>
+  <div class="emoji" data-keywords="pushpin" onclick="copyEmoji('📌')">📌</div>
+  <div class="emoji" data-keywords="round pushpin" onclick="copyEmoji('📍')">📍</div>
+
+  <!-- Religion / peace -->
+  <div class="emoji" data-keywords="latin cross christian" onclick="copyEmoji('✝️')">✝️</div>
+  <div class="emoji" data-keywords="star and crescent islam" onclick="copyEmoji('☪️')">☪️</div>
+  <div class="emoji" data-keywords="star of david jewish" onclick="copyEmoji('✡️')">✡️</div>
+  <div class="emoji" data-keywords="om symbol hindu" onclick="copyEmoji('🕉️')">🕉️</div>
+  <div class="emoji" data-keywords="peace symbol" onclick="copyEmoji('☮️')">☮️</div>
+  <div class="emoji" data-keywords="yin yang" onclick="copyEmoji('☯️')">☯️</div>
+
+  <!-- Zodiac -->
+  <div class="emoji" data-keywords="aries zodiac" onclick="copyEmoji('♈')">♈</div>
+  <div class="emoji" data-keywords="taurus zodiac" onclick="copyEmoji('♉')">♉</div>
+  <div class="emoji" data-keywords="gemini zodiac" onclick="copyEmoji('♊')">♊</div>
+  <div class="emoji" data-keywords="cancer zodiac" onclick="copyEmoji('♋')">♋</div>
+  <div class="emoji" data-keywords="leo zodiac" onclick="copyEmoji('♌')">♌</div>
+  <div class="emoji" data-keywords="virgo zodiac" onclick="copyEmoji('♍')">♍</div>
+  <div class="emoji" data-keywords="libra zodiac" onclick="copyEmoji('♎')">♎</div>
+  <div class="emoji" data-keywords="scorpius zodiac" onclick="copyEmoji('♏')">♏</div>
+  <div class="emoji" data-keywords="sagittarius zodiac" onclick="copyEmoji('♐')">♐</div>
+  <div class="emoji" data-keywords="capricorn zodiac" onclick="copyEmoji('♑')">♑</div>
+  <div class="emoji" data-keywords="aquarius zodiac" onclick="copyEmoji('♒')">♒</div>
+  <div class="emoji" data-keywords="pisces zodiac" onclick="copyEmoji('♓')">♓</div>
+
+  <!-- Infinity / math-ish -->
+  <div class="emoji" data-keywords="infinity symbol" onclick="copyEmoji('♾️')">♾️</div>
+  <div class="emoji" data-keywords="recycling symbol" onclick="copyEmoji('♻️')">♻️</div>
+  <div class="emoji" data-keywords="copyright" onclick="copyEmoji('©️')">©️</div>
+  <div class="emoji" data-keywords="registered" onclick="copyEmoji('®️')">®️</div>
+  <div class="emoji" data-keywords="trademark" onclick="copyEmoji('™️')">™️</div>
+  <div class="emoji" data-keywords="double curly loop" onclick="copyEmoji('➿')">➿</div>
+<div class="emoji" data-keywords="curl loop" onclick="copyEmoji('➰')">➰</div>
+<div class="emoji" data-keywords="wavy dash" onclick="copyEmoji('〰️')">〰️</div>
+<div class="emoji" data-keywords="hollow red circle record" onclick="copyEmoji('⭕')">⭕</div>
+<div class="emoji" data-keywords="black small square" onclick="copyEmoji('▪️')">▪️</div>
+<div class="emoji" data-keywords="white small square" onclick="copyEmoji('▫️')">▫️</div>
+<div class="emoji" data-keywords="black medium square" onclick="copyEmoji('◼️')">◼️</div>
+<div class="emoji" data-keywords="white medium square" onclick="copyEmoji('◻️')">◻️</div>
+<div class="emoji" data-keywords="black medium small square" onclick="copyEmoji('◾')">◾</div>
+<div class="emoji" data-keywords="white medium small square" onclick="copyEmoji('◽')">◽</div>
+<div class="emoji" data-keywords="white large square" onclick="copyEmoji('⬜')">⬜</div>
+<div class="emoji" data-keywords="black large square" onclick="copyEmoji('⬛')">⬛</div>
+<div class="emoji" data-keywords="red circle" onclick="copyEmoji('🔴')">🔴</div>
+<div class="emoji" data-keywords="yellow circle" onclick="copyEmoji('🟡')">🟡</div>
+<div class="emoji" data-keywords="green circle" onclick="copyEmoji('🟢')">🟢</div>
+<div class="emoji" data-keywords="purple circle" onclick="copyEmoji('🟣')">🟣</div>
+<div class="emoji" data-keywords="brown circle" onclick="copyEmoji('🟤')">🟤</div>
+<div class="emoji" data-keywords="white circle" onclick="copyEmoji('⚪')">⚪</div>
+<div class="emoji" data-keywords="black circle" onclick="copyEmoji('⚫')">⚫</div>
+<div class="emoji" data-keywords="hollow red diamond" onclick="copyEmoji('♦️')">♦️</div>
+<div class="emoji" data-keywords="black club suit" onclick="copyEmoji('♣️')">♣️</div>
+<div class="emoji" data-keywords="black spade suit" onclick="copyEmoji('♠️')">♠️</div>
+<div class="emoji" data-keywords="black heart suit" onclick="copyEmoji('♥️')">♥️</div>
+<div class="emoji" data-keywords="joker playing card" onclick="copyEmoji('🃏')">🃏</div>
+<div class="emoji" data-keywords="mahjong red dragon" onclick="copyEmoji('🀄')">🀄</div>
+
+<div class="emoji" data-keywords="left right arrow" onclick="copyEmoji('↔️')">↔️</div>
+<div class="emoji" data-keywords="up down arrow" onclick="copyEmoji('↕️')">↕️</div>
+<div class="emoji" data-keywords="top arrow" onclick="copyEmoji('🔝')">🔝</div>
+<div class="emoji" data-keywords="end arrow" onclick="copyEmoji('🔚')">🔚</div>
+<div class="emoji" data-keywords="on arrow" onclick="copyEmoji('🔛')">🔛</div>
+<div class="emoji" data-keywords="soon arrow" onclick="copyEmoji('🔜')">🔜</div>
+<div class="emoji" data-keywords="back arrow" onclick="copyEmoji('🔙')">🔙</div>
+
+<div class="emoji" data-keywords="sparkle asterisk symbol" onclick="copyEmoji('✳️')">✳️</div>
+<div class="emoji" data-keywords="eight spoked asterisk" onclick="copyEmoji('✳️')">✳️</div>
+<div class="emoji" data-keywords="eight pointed star" onclick="copyEmoji('✴️')">✴️</div>
+<div class="emoji" data-keywords="star of david" onclick="copyEmoji('✡️')">✡️</div>
+<div class="emoji" data-keywords="white star" onclick="copyEmoji('☆')">☆</div>
+
+<div class="emoji" data-keywords="black small diamond" onclick="copyEmoji('◆')">◆</div>
+<div class="emoji" data-keywords="white small diamond" onclick="copyEmoji('◇')">◇</div>
+
+<div class="emoji" data-keywords="double vertical bar pause" onclick="copyEmoji('⏸️')">⏸️</div>
+<div class="emoji" data-keywords="black square for stop" onclick="copyEmoji('⏹️')">⏹️</div>
+<div class="emoji" data-keywords="black circle for record" onclick="copyEmoji('⏺️')">⏺️</div>
+
+<div class="emoji" data-keywords="input latin letters" onclick="copyEmoji('🔤')">🔤</div>
+<div class="emoji" data-keywords="input uppercase letters" onclick="copyEmoji('🔠')">🔠</div>
+<div class="emoji" data-keywords="input lowercase letters" onclick="copyEmoji('🔡')">🔡</div>
+<div class="emoji" data-keywords="input symbols" onclick="copyEmoji('🔣')">🔣</div>
+
+<div class="emoji" data-keywords="ab button" onclick="copyEmoji('🆎')">🆎</div>
+<div class="emoji" data-keywords="cl button" onclick="copyEmoji('🆑')">🆑</div>
+<div class="emoji" data-keywords="sos button" onclick="copyEmoji('🆘')">🆘</div>
+<div class="emoji" data-keywords="new button" onclick="copyEmoji('🆕')">🆕</div>
+<div class="emoji" data-keywords="up button" onclick="copyEmoji('🆙')">🆙</div>
+<div class="emoji" data-keywords="cool button" onclick="copyEmoji('🆒')">🆒</div>
+<div class="emoji" data-keywords="free button" onclick="copyEmoji('🆓')">🆓</div>
+<div class="emoji" data-keywords="id button" onclick="copyEmoji('🆔')">🆔</div>
+<div class="emoji" data-keywords="ok button" onclick="copyEmoji('🆗')">🆗</div>
+<div class="emoji" data-keywords="ng button" onclick="copyEmoji('🆖')">🆖</div>
+
+<div class="emoji" data-keywords="circled m metro" onclick="copyEmoji('Ⓜ️')">Ⓜ️</div>
+<div class="emoji" data-keywords="circled letter p parking" onclick="copyEmoji('🅿️')">🅿️</div>
+<div class="emoji" data-keywords="no one under eighteen 18" onclick="copyEmoji('🔞')">🔞</div>
+<div class="emoji" data-keywords="no mobile phones" onclick="copyEmoji('📵')">📵</div>
+<div class="emoji" data-keywords="non potable water" onclick="copyEmoji('🚱')">🚱</div>
+<div class="emoji" data-keywords="potable water" onclick="copyEmoji('🚰')">🚰</div>
+<div class="emoji" data-keywords="wheelchair symbol accessibility" onclick="copyEmoji('♿')">♿</div>
+<div class="emoji" data-keywords="restroom wc" onclick="copyEmoji('🚻')">🚻</div>
+<div class="emoji" data-keywords="men’s room" onclick="copyEmoji('🚹')">🚹</div>
+<div class="emoji" data-keywords="women’s room" onclick="copyEmoji('🚺')">🚺</div>
+<div class="emoji" data-keywords="baby symbol changing" onclick="copyEmoji('🚼')">🚼</div>
+<div class="emoji" data-keywords="passport control" onclick="copyEmoji('🛂')">🛂</div>
+<div class="emoji" data-keywords="customs" onclick="copyEmoji('🛃')">🛃</div>
+<div class="emoji" data-keywords="baggage claim" onclick="copyEmoji('🛄')">🛄</div>
+<div class="emoji" data-keywords="left luggage" onclick="copyEmoji('🛅')">🛅</div>
+
+</div>
+
+<div class="category">
+  <h2>⚽ Sports & Activities</h2>
+
+  <!-- Balls & games -->
+  <div class="emoji" data-keywords="soccer football ball sport" onclick="copyEmoji('⚽')">⚽</div>
+  <div class="emoji" data-keywords="basketball ball sport" onclick="copyEmoji('🏀')">🏀</div>
+  <div class="emoji" data-keywords="american football ball sport" onclick="copyEmoji('🏈')">🏈</div>
+  <div class="emoji" data-keywords="baseball ball sport" onclick="copyEmoji('⚾')">⚾</div>
+  <div class="emoji" data-keywords="softball ball sport" onclick="copyEmoji('🥎')">🥎</div>
+  <div class="emoji" data-keywords="tennis ball sport" onclick="copyEmoji('🎾')">🎾</div>
+  <div class="emoji" data-keywords="volleyball ball sport" onclick="copyEmoji('🏐')">🏐</div>
+  <div class="emoji" data-keywords="rugby football ball sport" onclick="copyEmoji('🏉')">🏉</div>
+  <div class="emoji" data-keywords="flying disc frisbee sport" onclick="copyEmoji('🥏')">🥏</div>
+  <div class="emoji" data-keywords="ping pong table tennis" onclick="copyEmoji('🏓')">🏓</div>
+  <div class="emoji" data-keywords="badminton racquet shuttlecock" onclick="copyEmoji('🏸')">🏸</div>
+  <div class="emoji" data-keywords="field hockey stick ball" onclick="copyEmoji('🏑')">🏑</div>
+  <div class="emoji" data-keywords="ice hockey stick puck" onclick="copyEmoji('🏒')">🏒</div>
+  <div class="emoji" data-keywords="lacrosse stick ball" onclick="copyEmoji('🥍')">🥍</div>
+  <div class="emoji" data-keywords="cricket game bat ball" onclick="copyEmoji('🏏')">🏏</div>
+  <div class="emoji" data-keywords="bowling ball pins" onclick="copyEmoji('🎳')">🎳</div>
+  <div class="emoji" data-keywords="billiards 8 ball pool" onclick="copyEmoji('🎱')">🎱</div>
+
+  <!-- People doing sports -->
+  <div class="emoji" data-keywords="person running runner" onclick="copyEmoji('🏃')">🏃</div>
+  <div class="emoji" data-keywords="person walking" onclick="copyEmoji('🚶')">🚶</div>
+  <div class="emoji" data-keywords="person surfing" onclick="copyEmoji('🏄')">🏄</div>
+  <div class="emoji" data-keywords="person swimming" onclick="copyEmoji('🏊')">🏊</div>
+  <div class="emoji" data-keywords="person golfing" onclick="copyEmoji('🏌️')">🏌️</div>
+  <div class="emoji" data-keywords="person biking bicycle" onclick="copyEmoji('🚴')">🚴</div>
+  <div class="emoji" data-keywords="person mountain biking" onclick="copyEmoji('🚵')">🚵</div>
+  <div class="emoji" data-keywords="horse racing jockey" onclick="copyEmoji('🏇')">🏇</div>
+  <div class="emoji" data-keywords="skier skiing" onclick="copyEmoji('⛷️')">⛷️</div>
+  <div class="emoji" data-keywords="snowboarder snowboarding" onclick="copyEmoji('🏂')">🏂</div>
+  <div class="emoji" data-keywords="person fencing" onclick="copyEmoji('🤺')">🤺</div>
+  <div class="emoji" data-keywords="person lifting weights gym" onclick="copyEmoji('🏋️')">🏋️</div>
+  <div class="emoji" data-keywords="person doing cartwheel gymnastics" onclick="copyEmoji('🤸')">🤸</div>
+  <div class="emoji" data-keywords="person playing handball" onclick="copyEmoji('🤾')">🤾</div>
+  <div class="emoji" data-keywords="person playing water polo" onclick="copyEmoji('🤽')">🤽</div>
+  <div class="emoji" data-keywords="person bouncing ball basketball" onclick="copyEmoji('⛹️')">⛹️</div>
+  <div class="emoji" data-keywords="person in lotus position yoga" onclick="copyEmoji('🧘')">🧘</div>
+
+  <!-- Equipment -->
+  <div class="emoji" data-keywords="fishing pole fish" onclick="copyEmoji('🎣')">🎣</div>
+  <div class="emoji" data-keywords="boxing glove" onclick="copyEmoji('🥊')">🥊</div>
+  <div class="emoji" data-keywords="martial arts uniform karate judo" onclick="copyEmoji('🥋')">🥋</div>
+  <div class="emoji" data-keywords="goal net" onclick="copyEmoji('🥅')">🥅</div>
+  <div class="emoji" data-keywords="ice skate" onclick="copyEmoji('⛸️')">⛸️</div>
+  <div class="emoji" data-keywords="skateboard" onclick="copyEmoji('🛹')">🛹</div>
+  <div class="emoji" data-keywords="sled" onclick="copyEmoji('🛷')">🛷</div>
+  <div class="emoji" data-keywords="canoe boat" onclick="copyEmoji('🛶')">🛶</div>
+
+  <!-- Hobbies / games -->
+  <div class="emoji" data-keywords="video game controller" onclick="copyEmoji('🎮')">🎮</div>
+  <div class="emoji" data-keywords="joystick retro game" onclick="copyEmoji('🕹️')">🕹️</div>
+  <div class="emoji" data-keywords="trophy award" onclick="copyEmoji('🏆')">🏆</div>
+  <div class="emoji" data-keywords="sports medal" onclick="copyEmoji('🏅')">🏅</div>
+  <div class="emoji" data-keywords="first place medal gold" onclick="copyEmoji('🥇')">🥇</div>
+  <div class="emoji" data-keywords="second place medal silver" onclick="copyEmoji('🥈')">🥈</div>
+  <div class="emoji" data-keywords="third place medal bronze" onclick="copyEmoji('🥉')">🥉</div>
+  <div class="emoji" data-keywords="direct hit dart bullseye" onclick="copyEmoji('🎯')">🎯</div>
+  <div class="emoji" data-keywords="game die dice" onclick="copyEmoji('🎲')">🎲</div>
+  <div class="emoji" data-keywords="puzzle piece" onclick="copyEmoji('🧩')">🧩</div>
+  <div class="emoji" data-keywords="slot machine" onclick="copyEmoji('🎰')">🎰</div>
+  <div class="emoji" data-keywords="jo-jo yoyo toy" onclick="copyEmoji('🪀')">🪀</div>
+  <div class="emoji" data-keywords="kite" onclick="copyEmoji('🪁')">🪁</div>
+  <div class="emoji" data-keywords="pool 8 ball billiards" onclick="copyEmoji('🎱')">🎱</div>
+
+  <!-- Party / events -->
+  <div class="emoji" data-keywords="party popper celebration" onclick="copyEmoji('🎉')">🎉</div>
+  <div class="emoji" data-keywords="confetti ball party" onclick="copyEmoji('🎊')">🎊</div>
+  <div class="emoji" data-keywords="balloon birthday" onclick="copyEmoji('🎈')">🎈</div>
+  <div class="emoji" data-keywords="ribbon decoration" onclick="copyEmoji('🎀')">🎀</div>
+  <div class="emoji" data-keywords="wrapped gift present" onclick="copyEmoji('🎁')">🎁</div>
+  <div class="emoji" data-keywords="ticket event" onclick="copyEmoji('🎟️')">🎟️</div>
+  <div class="emoji" data-keywords="admission tickets" onclick="copyEmoji('🎫')">🎫</div>
+</div>
+
+ <div class="category">
+  <h2>🌍 Travel & Places</h2>
+
+  <!-- Maps & earth -->
+  <div class="emoji" data-keywords="globe showing europe africa world earth" onclick="copyEmoji('🌍')">🌍</div>
+  <div class="emoji" data-keywords="globe showing americas world earth" onclick="copyEmoji('🌎')">🌎</div>
+  <div class="emoji" data-keywords="globe showing asia australia world earth" onclick="copyEmoji('🌏')">🌏</div>
+  <div class="emoji" data-keywords="globe with meridians world" onclick="copyEmoji('🌐')">🌐</div>
+  <div class="emoji" data-keywords="world map" onclick="copyEmoji('🗺️')">🗺️</div>
+  <div class="emoji" data-keywords="map of japan" onclick="copyEmoji('🗾')">🗾</div>
+  <div class="emoji" data-keywords="compass navigation" onclick="copyEmoji('🧭')">🧭</div>
+
+  <!-- Nature / landscapes -->
+  <div class="emoji" data-keywords="snow capped mountain" onclick="copyEmoji('🏔️')">🏔️</div>
+  <div class="emoji" data-keywords="mountain" onclick="copyEmoji('⛰️')">⛰️</div>
+  <div class="emoji" data-keywords="volcano" onclick="copyEmoji('🌋')">🌋</div>
+  <div class="emoji" data-keywords="mount fuji japan" onclick="copyEmoji('🗻')">🗻</div>
+  <div class="emoji" data-keywords="desert" onclick="copyEmoji('🏜️')">🏜️</div>
+  <div class="emoji" data-keywords="desert island tropical" onclick="copyEmoji('🏝️')">🏝️</div>
+  <div class="emoji" data-keywords="national park landscape" onclick="copyEmoji('🏞️')">🏞️</div>
+  <div class="emoji" data-keywords="beach with umbrella sea" onclick="copyEmoji('🏖️')">🏖️</div>
+  <div class="emoji" data-keywords="camping tent night" onclick="copyEmoji('🏕️')">🏕️</div>
+  <div class="emoji" data-keywords="stadium sports arena" onclick="copyEmoji('🏟️')">🏟️</div>
+
+  <!-- City & sky scenes -->
+  <div class="emoji" data-keywords="foggy city bridge" onclick="copyEmoji('🌁')">🌁</div>
+  <div class="emoji" data-keywords="night with stars" onclick="copyEmoji('🌃')">🌃</div>
+  <div class="emoji" data-keywords="sunrise over mountains" onclick="copyEmoji('🌄')">🌄</div>
+  <div class="emoji" data-keywords="sunrise" onclick="copyEmoji('🌅')">🌅</div>
+  <div class="emoji" data-keywords="cityscape" onclick="copyEmoji('🏙️')">🏙️</div>
+  <div class="emoji" data-keywords="cityscape at dusk" onclick="copyEmoji('🌆')">🌆</div>
+  <div class="emoji" data-keywords="sunset" onclick="copyEmoji('🌇')">🌇</div>
+  <div class="emoji" data-keywords="bridge at night" onclick="copyEmoji('🌉')">🌉</div>
+
+  <!-- Buildings -->
+  <div class="emoji" data-keywords="house" onclick="copyEmoji('🏠')">🏠</div>
+  <div class="emoji" data-keywords="house with garden" onclick="copyEmoji('🏡')">🏡</div>
+  <div class="emoji" data-keywords="office building" onclick="copyEmoji('🏢')">🏢</div>
+  <div class="emoji" data-keywords="japanese post office" onclick="copyEmoji('🏣')">🏣</div>
+  <div class="emoji" data-keywords="post office" onclick="copyEmoji('🏤')">🏤</div>
+  <div class="emoji" data-keywords="hospital" onclick="copyEmoji('🏥')">🏥</div>
+  <div class="emoji" data-keywords="bank" onclick="copyEmoji('🏦')">🏦</div>
+  <div class="emoji" data-keywords="hotel" onclick="copyEmoji('🏨')">🏨</div>
+  <div class="emoji" data-keywords="love hotel" onclick="copyEmoji('🏩')">🏩</div>
+  <div class="emoji" data-keywords="convenience store" onclick="copyEmoji('🏪')">🏪</div>
+  <div class="emoji" data-keywords="school" onclick="copyEmoji('🏫')">🏫</div>
+  <div class="emoji" data-keywords="department store" onclick="copyEmoji('🏬')">🏬</div>
+  <div class="emoji" data-keywords="factory" onclick="copyEmoji('🏭')">🏭</div>
+  <div class="emoji" data-keywords="japanese castle" onclick="copyEmoji('🏯')">🏯</div>
+  <div class="emoji" data-keywords="castle" onclick="copyEmoji('🏰')">🏰</div>
+  <div class="emoji" data-keywords="derelict house abandoned" onclick="copyEmoji('🏚️')">🏚️</div>
+
+  <!-- Landmarks & religious buildings -->
+  <div class="emoji" data-keywords="classical building museum" onclick="copyEmoji('🏛️')">🏛️</div>
+  <div class="emoji" data-keywords="wedding church chapel" onclick="copyEmoji('💒')">💒</div>
+  <div class="emoji" data-keywords="tokyo tower" onclick="copyEmoji('🗼')">🗼</div>
+  <div class="emoji" data-keywords="statue of liberty" onclick="copyEmoji('🗽')">🗽</div>
+  <div class="emoji" data-keywords="church" onclick="copyEmoji('⛪')">⛪</div>
+  <div class="emoji" data-keywords="mosque" onclick="copyEmoji('🕌')">🕌</div>
+  <div class="emoji" data-keywords="synagogue" onclick="copyEmoji('🕍')">🕍</div>
+  <div class="emoji" data-keywords="hindu temple" onclick="copyEmoji('🛕')">🛕</div>
+  <div class="emoji" data-keywords="shinto shrine" onclick="copyEmoji('⛩️')">⛩️</div>
+  <div class="emoji" data-keywords="kaaba" onclick="copyEmoji('🕋')">🕋</div>
+  <div class="emoji" data-keywords="fountain" onclick="copyEmoji('⛲')">⛲</div>
+
+  <!-- Transport & places-lite icons -->
+  <div class="emoji" data-keywords="bus stop sign" onclick="copyEmoji('🚏')">🚏</div>
+  <div class="emoji" data-keywords="fuel pump petrol gas station" onclick="copyEmoji('⛽')">⛽</div>
+  <div class="emoji" data-keywords="anchor port harbor" onclick="copyEmoji('⚓')">⚓</div>
+  <div class="emoji" data-keywords="construction barrier roadwork" onclick="copyEmoji('🚧')">🚧</div>
+  <div class="emoji" data-keywords="vertical traffic light" onclick="copyEmoji('🚦')">🚦</div>
+  <div class="emoji" data-keywords="horizontal traffic light" onclick="copyEmoji('🚥')">🚥</div>
+</div>
+
+ <div class="category">
+  <h2>💡 Tools & Tech</h2>
+
+  <!-- Phones & communication -->
+  <div class="emoji" data-keywords="mobile phone smartphone" onclick="copyEmoji('📱')">📱</div>
+  <div class="emoji" data-keywords="mobile phone with arrow send" onclick="copyEmoji('📲')">📲</div>
+  <div class="emoji" data-keywords="telephone receiver call" onclick="copyEmoji('📞')">📞</div>
+  <div class="emoji" data-keywords="telephone" onclick="copyEmoji('☎️')">☎️</div>
+  <div class="emoji" data-keywords="fax machine" onclick="copyEmoji('📠')">📠</div>
+  <div class="emoji" data-keywords="pager" onclick="copyEmoji('📟')">📟</div>
+  <div class="emoji" data-keywords="satellite antenna dish" onclick="copyEmoji('📡')">📡</div>
+
+  <!-- Computers & screens -->
+  <div class="emoji" data-keywords="laptop computer pc" onclick="copyEmoji('💻')">💻</div>
+  <div class="emoji" data-keywords="desktop computer pc" onclick="copyEmoji('🖥️')">🖥️</div>
+  <div class="emoji" data-keywords="printer" onclick="copyEmoji('🖨️')">🖨️</div>
+  <div class="emoji" data-keywords="keyboard" onclick="copyEmoji('⌨️')">⌨️</div>
+  <div class="emoji" data-keywords="computer mouse" onclick="copyEmoji('🖱️')">🖱️</div>
+  <div class="emoji" data-keywords="trackball" onclick="copyEmoji('🖲️')">🖲️</div>
+  <div class="emoji" data-keywords="minidisc disc" onclick="copyEmoji('💽')">💽</div>
+  <div class="emoji" data-keywords="floppy disk" onclick="copyEmoji('💾')">💾</div>
+  <div class="emoji" data-keywords="optical disc cd" onclick="copyEmoji('📀')">📀</div>
+  <div class="emoji" data-keywords="dvd disc" onclick="copyEmoji('💿')">💿</div>
+
+  <!-- Power & light -->
+  <div class="emoji" data-keywords="battery" onclick="copyEmoji('🔋')">🔋</div>
+  <div class="emoji" data-keywords="electric plug power" onclick="copyEmoji('🔌')">🔌</div>
+  <div class="emoji" data-keywords="light bulb idea" onclick="copyEmoji('💡')">💡</div>
+  <div class="emoji" data-keywords="flashlight torch" onclick="copyEmoji('🔦')">🔦</div>
+  <div class="emoji" data-keywords="candle" onclick="copyEmoji('🕯️')">🕯️</div>
+  <div class="emoji" data-keywords="diya lamp" onclick="copyEmoji('🪔')">🪔</div>
+  <div class="emoji" data-keywords="magnifying glass tilted left search" onclick="copyEmoji('🔍')">🔍</div>
+  <div class="emoji" data-keywords="magnifying glass tilted right search" onclick="copyEmoji('🔎')">🔎</div>
+
+  <!-- Coding / dev-friendly -->
+  <div class="emoji" data-keywords="gear cog settings" onclick="copyEmoji('⚙️')">⚙️</div>
+  <div class="emoji" data-keywords="hammer and wrench tools" onclick="copyEmoji('🛠️')">🛠️</div>
+  <div class="emoji" data-keywords="wrench tool" onclick="copyEmoji('🔧')">🔧</div>
+  <div class="emoji" data-keywords="screwdriver tool" onclick="copyEmoji('🪛')">🪛</div>
+  <div class="emoji" data-keywords="hammer tool" onclick="copyEmoji('🔨')">🔨</div>
+  <div class="emoji" data-keywords="axe tool" onclick="copyEmoji('🪓')">🪓</div>
+  <div class="emoji" data-keywords="pick pickaxe mining" onclick="copyEmoji('⛏️')">⛏️</div>
+  <div class="emoji" data-keywords="hammer and pick tools" onclick="copyEmoji('⚒️')">⚒️</div>
+  <div class="emoji" data-keywords="nut and bolt hardware" onclick="copyEmoji('🔩')">🔩</div>
+  <div class="emoji" data-keywords="clamp vice" onclick="copyEmoji('🗜️')">🗜️</div>
+  <div class="emoji" data-keywords="carpentry saw" onclick="copyEmoji('🪚')">🪚</div>
+  <div class="emoji" data-keywords="toolbox tools" onclick="copyEmoji('🧰')">🧰</div>
+  <div class="emoji" data-keywords="brick wall" onclick="copyEmoji('🧱')">🧱</div>
+
+  <!-- Science & lab -->
+  <div class="emoji" data-keywords="microscope lab science" onclick="copyEmoji('🔬')">🔬</div>
+  <div class="emoji" data-keywords="telescope space" onclick="copyEmoji('🔭')">🔭</div>
+  <div class="emoji" data-keywords="satellite antenna" onclick="copyEmoji('📡')">📡</div>
+  <div class="emoji" data-keywords="test tube lab" onclick="copyEmoji('🧪')">🧪</div>
+  <div class="emoji" data-keywords="petri dish lab" onclick="copyEmoji('🧫')">🧫</div>
+  <div class="emoji" data-keywords="dna double helix" onclick="copyEmoji('🧬')">🧬</div>
+  <div class="emoji" data-keywords="syringe injection" onclick="copyEmoji('💉')">💉</div>
+  <div class="emoji" data-keywords="pill capsule medicine" onclick="copyEmoji('💊')">💊</div>
+  <div class="emoji" data-keywords="stethoscope medical" onclick="copyEmoji('🩺')">🩺</div>
+
+  <!-- Security / keys (tech-adjacent) -->
+  <div class="emoji" data-keywords="locked" onclick="copyEmoji('🔒')">🔒</div>
+  <div class="emoji" data-keywords="unlocked" onclick="copyEmoji('🔓')">🔓</div>
+  <div class="emoji" data-keywords="lock with ink pen" onclick="copyEmoji('🔏')">🔏</div>
+  <div class="emoji" data-keywords="lock with key" onclick="copyEmoji('🔐')">🔐</div>
+  <div class="emoji" data-keywords="key" onclick="copyEmoji('🔑')">🔑</div>
+  <div class="emoji" data-keywords="old key" onclick="copyEmoji('🗝️')">🗝️</div>
+  <div class="emoji" data-keywords="joystick game controller retro" onclick="copyEmoji('🕹️')">🕹️</div>
+<div class="emoji" data-keywords="video game controller console" onclick="copyEmoji('🎮')">🎮</div>
+<div class="emoji" data-keywords="headphone audio music" onclick="copyEmoji('🎧')">🎧</div>
+<div class="emoji" data-keywords="studio microphone recording" onclick="copyEmoji('🎙️')">🎙️</div>
+<div class="emoji" data-keywords="level slider audio mixer" onclick="copyEmoji('🎚️')">🎚️</div>
+<div class="emoji" data-keywords="control knobs mixer" onclick="copyEmoji('🎛️')">🎛️</div>
+
+<div class="emoji" data-keywords="radio" onclick="copyEmoji('📻')">📻</div>
+<div class="emoji" data-keywords="television tv screen" onclick="copyEmoji('📺')">📺</div>
+<div class="emoji" data-keywords="mobile phone off mute" onclick="copyEmoji('📴')">📴</div>
+<div class="emoji" data-keywords="antenna bars signal" onclick="copyEmoji('📶')">📶</div>
+<div class="emoji" data-keywords="satellite orbit space" onclick="copyEmoji('🛰️')">🛰️</div>
+<div class="emoji" data-keywords="radar" onclick="copyEmoji('📡')">📡</div>
+
+<div class="emoji" data-keywords="calculator" onclick="copyEmoji('🧮')">🧮</div>
+<div class="emoji" data-keywords="printer office" onclick="copyEmoji('🖨️')">🖨️</div>
+<div class="emoji" data-keywords="fax technology" onclick="copyEmoji('📠')">📠</div>
+<div class="emoji" data-keywords="scanner photocopier" onclick="copyEmoji('🖨️')">🖨️</div>
+
+<div class="emoji" data-keywords="watch wristwatch" onclick="copyEmoji('⌚')">⌚</div>
+<div class="emoji" data-keywords="alarm clock" onclick="copyEmoji('⏰')">⏰</div>
+<div class="emoji" data-keywords="stopwatch timer" onclick="copyEmoji('⏱️')">⏱️</div>
+<div class="emoji" data-keywords="timer clock" onclick="copyEmoji('⏲️')">⏲️</div>
+<div class="emoji" data-keywords="mantelpiece clock" onclick="copyEmoji('🕰️')">🕰️</div>
+<div class="emoji" data-keywords="hourglass done" onclick="copyEmoji('⌛')">⌛</div>
+<div class="emoji" data-keywords="hourglass not done loading" onclick="copyEmoji('⏳')">⏳</div>
+
+<div class="emoji" data-keywords="link chain" onclick="copyEmoji('🔗')">🔗</div>
+<div class="emoji" data-keywords="chains metal" onclick="copyEmoji('⛓️')">⛓️</div>
+<div class="emoji" data-keywords="hook metal" onclick="copyEmoji('🪝')">🪝</div>
+<div class="emoji" data-keywords="magnet horseshoe" onclick="copyEmoji('🧲')">🧲</div>
+
+<div class="emoji" data-keywords="safety pin" onclick="copyEmoji('🧷')">🧷</div>
+<div class="emoji" data-keywords="sewing needle" onclick="copyEmoji('🪡')">🪡</div>
+<div class="emoji" data-keywords="thread spool" onclick="copyEmoji('🧵')">🧵</div>
+<div class="emoji" data-keywords="yarn ball" onclick="copyEmoji('🧶')">🧶</div>
+
+<div class="emoji" data-keywords="straight ruler measure" onclick="copyEmoji('📏')">📏</div>
+<div class="emoji" data-keywords="triangular ruler set square" onclick="copyEmoji('📐')">📐</div>
+<div class="emoji" data-keywords="abacus math" onclick="copyEmoji('🧮')">🧮</div>
+<div class="emoji" data-keywords="clipboard" onclick="copyEmoji('📋')">📋</div>
+<div class="emoji" data-keywords="file folder" onclick="copyEmoji('📁')">📁</div>
+<div class="emoji" data-keywords="open file folder" onclick="copyEmoji('📂')">📂</div>
+<div class="emoji" data-keywords="card index dividers" onclick="copyEmoji('🗂️')">🗂️</div>
+<div class="emoji" data-keywords="calendar" onclick="copyEmoji('📅')">📅</div>
+<div class="emoji" data-keywords="tear off calendar" onclick="copyEmoji('📆')">📆</div>
+
+<div class="emoji" data-keywords="wastebasket bin trash" onclick="copyEmoji('🗑️')">🗑️</div>
+<div class="emoji" data-keywords="file cabinet" onclick="copyEmoji('🗄️')">🗄️</div>
+<div class="emoji" data-keywords="envelope email" onclick="copyEmoji('✉️')">✉️</div>
+<div class="emoji" data-keywords="incoming envelope" onclick="copyEmoji('📨')">📨</div>
+<div class="emoji" data-keywords="envelope with arrow outbox" onclick="copyEmoji('📩')">📩</div>
+<div class="emoji" data-keywords="e-mail symbol" onclick="copyEmoji('📧')">📧</div>
+<div class="emoji" data-keywords="inbox tray" onclick="copyEmoji('📥')">📥</div>
+<div class="emoji" data-keywords="outbox tray" onclick="copyEmoji('📤')">📤</div>
+
+<div class="emoji" data-keywords="package parcel" onclick="copyEmoji('📦')">📦</div>
+<div class="emoji" data-keywords="money bag" onclick="copyEmoji('💰')">💰</div>
+<div class="emoji" data-keywords="coin money" onclick="copyEmoji('🪙')">🪙</div>
+<div class="emoji" data-keywords="credit card" onclick="copyEmoji('💳')">💳</div>
+<div class="emoji" data-keywords="receipt bill" onclick="copyEmoji('🧾')">🧾</div>
+<div class="emoji" data-keywords="bar chart graph" onclick="copyEmoji('📊')">📊</div>
+<div class="emoji" data-keywords="chart increasing" onclick="copyEmoji('📈')">📈</div>
+<div class="emoji" data-keywords="chart decreasing" onclick="copyEmoji('📉')">📉</div>
+
+</div>
+
+<div class="category">
+  <h2>🚗 Cars & Vehicles</h2>
+
+  <!-- Cars -->
+  <div class="emoji" data-keywords="automobile car vehicle" onclick="copyEmoji('🚗')">🚗</div>
+  <div class="emoji" data-keywords="oncoming automobile car" onclick="copyEmoji('🚘')">🚘</div>
+  <div class="emoji" data-keywords="sport utility vehicle suv" onclick="copyEmoji('🚙')">🚙</div>
+  <div class="emoji" data-keywords="racing car race" onclick="copyEmoji('🏎️')">🏎️</div>
+  <div class="emoji" data-keywords="taxi cab" onclick="copyEmoji('🚕')">🚕</div>
+  <div class="emoji" data-keywords="oncoming taxi cab" onclick="copyEmoji('🚖')">🚖</div>
+  <div class="emoji" data-keywords="police car" onclick="copyEmoji('🚓')">🚓</div>
+  <div class="emoji" data-keywords="oncoming police car" onclick="copyEmoji('🚔')">🚔</div>
+  <div class="emoji" data-keywords="ambulance emergency" onclick="copyEmoji('🚑')">🚑</div>
+  <div class="emoji" data-keywords="fire engine truck" onclick="copyEmoji('🚒')">🚒</div>
+  <div class="emoji" data-keywords="pickup truck" onclick="copyEmoji('🛻')">🛻</div>
+  <div class="emoji" data-keywords="delivery truck lorry" onclick="copyEmoji('🚚')">🚚</div>
+  <div class="emoji" data-keywords="articulated lorry semi truck" onclick="copyEmoji('🚛')">🚛</div>
+  <div class="emoji" data-keywords="tractor farm vehicle" onclick="copyEmoji('🚜')">🚜</div>
+
+  <!-- Buses & public transport -->
+  <div class="emoji" data-keywords="bus public transport" onclick="copyEmoji('🚌')">🚌</div>
+  <div class="emoji" data-keywords="oncoming bus" onclick="copyEmoji('🚍')">🚍</div>
+  <div class="emoji" data-keywords="trolleybus electric bus" onclick="copyEmoji('🚎')">🚎</div>
+  <div class="emoji" data-keywords="minibus van" onclick="copyEmoji('🚐')">🚐</div>
+
+  <!-- Bikes & small vehicles -->
+  <div class="emoji" data-keywords="bicycle bike" onclick="copyEmoji('🚲')">🚲</div>
+  <div class="emoji" data-keywords="kick scooter" onclick="copyEmoji('🛴')">🛴</div>
+  <div class="emoji" data-keywords="motor scooter moped" onclick="copyEmoji('🛵')">🛵</div>
+  <div class="emoji" data-keywords="auto rickshaw tuk tuk" onclick="copyEmoji('🛺')">🛺</div>
+  <div class="emoji" data-keywords="motorcycle motorbike" onclick="copyEmoji('🏍️')">🏍️</div>
+
+  <!-- Road / traffic signs -->
+  <div class="emoji" data-keywords="motorway highway road" onclick="copyEmoji('🛣️')">🛣️</div>
+  <div class="emoji" data-keywords="railway track rails" onclick="copyEmoji('🛤️')">🛤️</div>
+  <div class="emoji" data-keywords="fuel pump petrol gas station" onclick="copyEmoji('⛽')">⛽</div>
+  <div class="emoji" data-keywords="wheel tyre tire" onclick="copyEmoji('🛞')">🛞</div>
+  <div class="emoji" data-keywords="police car light siren" onclick="copyEmoji('🚨')">🚨</div>
+  <div class="emoji" data-keywords="horizontal traffic light" onclick="copyEmoji('🚥')">🚥</div>
+  <div class="emoji" data-keywords="vertical traffic light" onclick="copyEmoji('🚦')">🚦</div>
+  <div class="emoji" data-keywords="stop sign octagonal" onclick="copyEmoji('🛑')">🛑</div>
+  <div class="emoji" data-keywords="construction barrier roadwork" onclick="copyEmoji('🚧')">🚧</div>
+</div>
+
+ <div class="category">
+  <h2>🚀 Trains, Planes & Boats</h2>
+
+  <!-- Trains -->
+  <div class="emoji" data-keywords="locomotive train" onclick="copyEmoji('🚂')">🚂</div>
+  <div class="emoji" data-keywords="railway car carriage" onclick="copyEmoji('🚃')">🚃</div>
+  <div class="emoji" data-keywords="high speed train" onclick="copyEmoji('🚄')">🚄</div>
+  <div class="emoji" data-keywords="bullet train" onclick="copyEmoji('🚅')">🚅</div>
+  <div class="emoji" data-keywords="train railway" onclick="copyEmoji('🚆')">🚆</div>
+  <div class="emoji" data-keywords="metro subway train" onclick="copyEmoji('🚇')">🚇</div>
+  <div class="emoji" data-keywords="light rail tram" onclick="copyEmoji('🚈')">🚈</div>
+  <div class="emoji" data-keywords="station platform" onclick="copyEmoji('🚉')">🚉</div>
+  <div class="emoji" data-keywords="tram streetcar" onclick="copyEmoji('🚊')">🚊</div>
+  <div class="emoji" data-keywords="monorail" onclick="copyEmoji('🚝')">🚝</div>
+  <div class="emoji" data-keywords="mountain railway" onclick="copyEmoji('🚞')">🚞</div>
+  <div class="emoji" data-keywords="suspension railway" onclick="copyEmoji('🚟')">🚟</div>
+  <div class="emoji" data-keywords="railway track rails" onclick="copyEmoji('🛤️')">🛤️</div>
+
+  <!-- Air -->
+  <div class="emoji" data-keywords="airplane plane flight" onclick="copyEmoji('✈️')">✈️</div>
+  <div class="emoji" data-keywords="small airplane plane" onclick="copyEmoji('🛩️')">🛩️</div>
+  <div class="emoji" data-keywords="airplane departure takeoff" onclick="copyEmoji('🛫')">🛫</div>
+  <div class="emoji" data-keywords="airplane arrival landing" onclick="copyEmoji('🛬')">🛬</div>
+  <div class="emoji" data-keywords="seat airplane train" onclick="copyEmoji('💺')">💺</div>
+  <div class="emoji" data-keywords="helicopter" onclick="copyEmoji('🚁')">🚁</div>
+  <div class="emoji" data-keywords="parachute" onclick="copyEmoji('🪂')">🪂</div>
+  <div class="emoji" data-keywords="satellite orbit space" onclick="copyEmoji('🛰️')">🛰️</div>
+  <div class="emoji" data-keywords="rocket space" onclick="copyEmoji('🚀')">🚀</div>
+  <div class="emoji" data-keywords="flying saucer ufo" onclick="copyEmoji('🛸')">🛸</div>
+
+  <!-- Water -->
+  <div class="emoji" data-keywords="sailboat boat" onclick="copyEmoji('⛵')">⛵</div>
+  <div class="emoji" data-keywords="speedboat motorboat" onclick="copyEmoji('🚤')">🚤</div>
+  <div class="emoji" data-keywords="passenger ship cruise" onclick="copyEmoji('🛳️')">🛳️</div>
+  <div class="emoji" data-keywords="ferry boat" onclick="copyEmoji('⛴️')">⛴️</div>
+  <div class="emoji" data-keywords="ship boat" onclick="copyEmoji('🚢')">🚢</div>
+  <div class="emoji" data-keywords="canoe kayak" onclick="copyEmoji('🛶')">🛶</div>
+  <div class="emoji" data-keywords="anchor harbor port" onclick="copyEmoji('⚓')">⚓</div>
+
+  <!-- Cable / mountain transport -->
+  <div class="emoji" data-keywords="aerial tramway cable car" onclick="copyEmoji('🚡')">🚡</div>
+  <div class="emoji" data-keywords="mountain cableway" onclick="copyEmoji('🚠')">🚠</div>
+  <div class="emoji" data-keywords="ropeway gondola" onclick="copyEmoji('🚡')">🚡</div>
+</div>
+
+ <div class="category">
+  <h2>📚 School & Office</h2>
+
+  <!-- Writing & drawing -->
+  <div class="emoji" data-keywords="pencil writing" onclick="copyEmoji('✏️')">✏️</div>
+  <div class="emoji" data-keywords="fountain pen" onclick="copyEmoji('🖋️')">🖋️</div>
+  <div class="emoji" data-keywords="pen ballpoint" onclick="copyEmoji('🖊️')">🖊️</div>
+  <div class="emoji" data-keywords="paintbrush art" onclick="copyEmoji('🖌️')">🖌️</div>
+  <div class="emoji" data-keywords="crayon" onclick="copyEmoji('🖍️')">🖍️</div>
+  <div class="emoji" data-keywords="memo pencil note" onclick="copyEmoji('📝')">📝</div>
+
+  <!-- Books & study -->
+  <div class="emoji" data-keywords="open book reading" onclick="copyEmoji('📖')">📖</div>
+  <div class="emoji" data-keywords="books stack" onclick="copyEmoji('📚')">📚</div>
+  <div class="emoji" data-keywords="blue book" onclick="copyEmoji('📘')">📘</div>
+  <div class="emoji" data-keywords="orange book" onclick="copyEmoji('📙')">📙</div>
+  <div class="emoji" data-keywords="green book" onclick="copyEmoji('📗')">📗</div>
+  <div class="emoji" data-keywords="notebook" onclick="copyEmoji('📓')">📓</div>
+  <div class="emoji" data-keywords="notebook with decorative cover" onclick="copyEmoji('📔')">📔</div>
+  <div class="emoji" data-keywords="ledger book accounting" onclick="copyEmoji('📒')">📒</div>
+  <div class="emoji" data-keywords="scroll document" onclick="copyEmoji('📜')">📜</div>
+  <div class="emoji" data-keywords="page facing up document" onclick="copyEmoji('📄')">📄</div>
+  <div class="emoji" data-keywords="page with curl" onclick="copyEmoji('📃')">📃</div>
+
+  <!-- Paper & files -->
+  <div class="emoji" data-keywords="bookmark" onclick="copyEmoji('🔖')">🔖</div>
+  <div class="emoji" data-keywords="bookmark tabs" onclick="copyEmoji('📑')">📑</div>
+  <div class="emoji" data-keywords="card index" onclick="copyEmoji('📇')">📇</div>
+  <div class="emoji" data-keywords="clipboard" onclick="copyEmoji('📋')">📋</div>
+  <div class="emoji" data-keywords="file folder" onclick="copyEmoji('📁')">📁</div>
+  <div class="emoji" data-keywords="open file folder" onclick="copyEmoji('📂')">📂</div>
+  <div class="emoji" data-keywords="card file box" onclick="copyEmoji('🗃️')">🗃️</div>
+  <div class="emoji" data-keywords="file cabinet" onclick="copyEmoji('🗄️')">🗄️</div>
+  <div class="emoji" data-keywords="wastebasket trash bin" onclick="copyEmoji('🗑️')">🗑️</div>
+
+  <!-- Stationery -->
+  <div class="emoji" data-keywords="pushpin pin" onclick="copyEmoji('📌')">📌</div>
+  <div class="emoji" data-keywords="round pushpin location pin" onclick="copyEmoji('📍')">📍</div>
+  <div class="emoji" data-keywords="paperclip" onclick="copyEmoji('📎')">📎</div>
+  <div class="emoji" data-keywords="linked paperclips" onclick="copyEmoji('🖇️')">🖇️</div>
+  <div class="emoji" data-keywords="straight ruler measure" onclick="copyEmoji('📏')">📏</div>
+  <div class="emoji" data-keywords="triangular ruler set square" onclick="copyEmoji('📐')">📐</div>
+  <div class="emoji" data-keywords="round push button radio" onclick="copyEmoji('🔘')">🔘</div>
+
+  <!-- Calendars & planning -->
+  <div class="emoji" data-keywords="calendar" onclick="copyEmoji('📅')">📅</div>
+  <div class="emoji" data-keywords="tear off calendar" onclick="copyEmoji('📆')">📆</div>
+  <div class="emoji" data-keywords="spiral calendar" onclick="copyEmoji('🗓️')">🗓️</div>
+  <div class="emoji" data-keywords="spiral notepad" onclick="copyEmoji('🗒️')">🗒️</div>
+
+  <!-- Mail & inbox -->
+  <div class="emoji" data-keywords="envelope mail letter" onclick="copyEmoji('✉️')">✉️</div>
+  <div class="emoji" data-keywords="incoming envelope" onclick="copyEmoji('📨')">📨</div>
+  <div class="emoji" data-keywords="envelope with arrow sent" onclick="copyEmoji('📩')">📩</div>
+  <div class="emoji" data-keywords="e-mail symbol" onclick="copyEmoji('📧')">📧</div>
+  <div class="emoji" data-keywords="inbox tray" onclick="copyEmoji('📥')">📥</div>
+  <div class="emoji" data-keywords="outbox tray" onclick="copyEmoji('📤')">📤</div>
+  <div class="emoji" data-keywords="package parcel" onclick="copyEmoji('📦')">📦</div>
+
+  <!-- Charts & money (office-ish) -->
+  <div class="emoji" data-keywords="chart increasing up graph" onclick="copyEmoji('📈')">📈</div>
+  <div class="emoji" data-keywords="chart decreasing down graph" onclick="copyEmoji('📉')">📉</div>
+  <div class="emoji" data-keywords="bar chart stats" onclick="copyEmoji('📊')">📊</div>
+  <div class="emoji" data-keywords="money bag" onclick="copyEmoji('💰')">💰</div>
+  <div class="emoji" data-keywords="coin money" onclick="copyEmoji('🪙')">🪙</div>
+  <div class="emoji" data-keywords="credit card" onclick="copyEmoji('💳')">💳</div>
+  <div class="emoji" data-keywords="receipt bill" onclick="copyEmoji('🧾')">🧾</div>
+</div>
+
+ <div class="category">
+  <h2>🧥 Clothes & Style</h2>
+
+  <!-- Head & face wear -->
+  <div class="emoji" data-keywords="top hat" onclick="copyEmoji('🎩')">🎩</div>
+  <div class="emoji" data-keywords="graduation cap" onclick="copyEmoji('🎓')">🎓</div>
+  <div class="emoji" data-keywords="billed cap baseball hat" onclick="copyEmoji('🧢')">🧢</div>
+  <div class="emoji" data-keywords="crown royal king queen" onclick="copyEmoji('👑')">👑</div>
+  <div class="emoji" data-keywords="rescue worker helmet" onclick="copyEmoji('⛑️')">⛑️</div>
+  <div class="emoji" data-keywords="womans hat" onclick="copyEmoji('👒')">👒</div>
+  <div class="emoji" data-keywords="scarf" onclick="copyEmoji('🧣')">🧣</div>
+  <div class="emoji" data-keywords="glasses eyeglasses" onclick="copyEmoji('👓')">👓</div>
+  <div class="emoji" data-keywords="sunglasses shades" onclick="copyEmoji('🕶️')">🕶️</div>
+  <div class="emoji" data-keywords="goggles safety" onclick="copyEmoji('🥽')">🥽</div>
+  <div class="emoji" data-keywords="face mask medical" onclick="copyEmoji('😷')">😷</div>
+
+  <!-- Upper body clothes -->
+  <div class="emoji" data-keywords="t shirt tshirt" onclick="copyEmoji('👕')">👕</div>
+  <div class="emoji" data-keywords="jeans trousers pants" onclick="copyEmoji('👖')">👖</div>
+  <div class="emoji" data-keywords="coat jacket" onclick="copyEmoji('🧥')">🧥</div>
+  <div class="emoji" data-keywords="dress" onclick="copyEmoji('👗')">👗</div>
+  <div class="emoji" data-keywords="kimono robe" onclick="copyEmoji('👘')">👘</div>
+  <div class="emoji" data-keywords="sari dress" onclick="copyEmoji('🥻')">🥻</div>
+  <div class="emoji" data-keywords="one piece swimsuit" onclick="copyEmoji('🩱')">🩱</div>
+  <div class="emoji" data-keywords="briefs underwear" onclick="copyEmoji('🩲')">🩲</div>
+  <div class="emoji" data-keywords="shorts" onclick="copyEmoji('🩳')">🩳</div>
+  <div class="emoji" data-keywords="lab coat doctor" onclick="copyEmoji('🥼')">🥼</div>
+  <div class="emoji" data-keywords="safety vest" onclick="copyEmoji('🦺')">🦺</div>
+
+  <!-- Footwear -->
+  <div class="emoji" data-keywords="socks" onclick="copyEmoji('🧦')">🧦</div>
+  <div class="emoji" data-keywords="running shoe sneaker" onclick="copyEmoji('👟')">👟</div>
+  <div class="emoji" data-keywords="high heel shoe" onclick="copyEmoji('👠')">👠</div>
+  <div class="emoji" data-keywords="womans sandal" onclick="copyEmoji('👡')">👡</div>
+  <div class="emoji" data-keywords="boot" onclick="copyEmoji('👢')">👢</div>
+  <div class="emoji" data-keywords="ballet shoes" onclick="copyEmoji('🩰')">🩰</div>
+  <div class="emoji" data-keywords="flip flop sandal" onclick="copyEmoji('🩴')">🩴</div>
+
+  <!-- Accessories & jewelry -->
+  <div class="emoji" data-keywords="handbag purse" onclick="copyEmoji('👜')">👜</div>
+  <div class="emoji" data-keywords="clutch bag" onclick="copyEmoji('👝')">👝</div>
+  <div class="emoji" data-keywords="shopping bags" onclick="copyEmoji('🛍️')">🛍️</div>
+  <div class="emoji" data-keywords="briefcase" onclick="copyEmoji('💼')">💼</div>
+  <div class="emoji" data-keywords="school backpack bag" onclick="copyEmoji('🎒')">🎒</div>
+  <div class="emoji" data-keywords="luggage suitcase" onclick="copyEmoji('🧳')">🧳</div>
+  <div class="emoji" data-keywords="ring diamond" onclick="copyEmoji('💍')">💍</div>
+  <div class="emoji" data-keywords="gem stone diamond" onclick="copyEmoji('💎')">💎</div>
+  <div class="emoji" data-keywords="lipstick makeup" onclick="copyEmoji('💄')">💄</div>
+  <div class="emoji" data-keywords="necklace jewelry" onclick="copyEmoji('📿')">📿</div>
+
+  <!-- Badges & uniforms -->
+  <div class="emoji" data-keywords="military medal" onclick="copyEmoji('🎖️')">🎖️</div>
+  <div class="emoji" data-keywords="police badge shield" onclick="copyEmoji('🛡️')">🛡️</div>
+</div>
+
+ <div class="category">
+  <h2>🌿 Nature & Weather</h2>
+
+  <!-- Plants & trees -->
+  <div class="emoji" data-keywords="seedling sprout plant" onclick="copyEmoji('🌱')">🌱</div>
+  <div class="emoji" data-keywords="potted plant" onclick="copyEmoji('🪴')">🪴</div>
+  <div class="emoji" data-keywords="herb plant" onclick="copyEmoji('🌿')">🌿</div>
+  <div class="emoji" data-keywords="four leaf clover lucky" onclick="copyEmoji('🍀')">🍀</div>
+  <div class="emoji" data-keywords="shamrock clover" onclick="copyEmoji('☘️')">☘️</div>
+  <div class="emoji" data-keywords="fallen leaf autumn" onclick="copyEmoji('🍂')">🍂</div>
+  <div class="emoji" data-keywords="maple leaf" onclick="copyEmoji('🍁')">🍁</div>
+  <div class="emoji" data-keywords="leaf fluttering wind" onclick="copyEmoji('🍃')">🍃</div>
+  <div class="emoji" data-keywords="sheaf of rice crop" onclick="copyEmoji('🌾')">🌾</div>
+  <div class="emoji" data-keywords="ear of corn maize" onclick="copyEmoji('🌽')">🌽</div>
+  <div class="emoji" data-keywords="grapes vine" onclick="copyEmoji('🍇')">🍇</div>
+  <div class="emoji" data-keywords="mushroom" onclick="copyEmoji('🍄')">🍄</div>
+  <div class="emoji" data-keywords="cactus desert" onclick="copyEmoji('🌵')">🌵</div>
+  <div class="emoji" data-keywords="palm tree tropical" onclick="copyEmoji('🌴')">🌴</div>
+  <div class="emoji" data-keywords="evergreen tree" onclick="copyEmoji('🌲')">🌲</div>
+  <div class="emoji" data-keywords="deciduous tree" onclick="copyEmoji('🌳')">🌳</div>
+  <div class="emoji" data-keywords="tanabata tree" onclick="copyEmoji('🎋')">🎋</div>
+
+  <!-- Flowers -->
+  <div class="emoji" data-keywords="cherry blossom flower sakura" onclick="copyEmoji('🌸')">🌸</div>
+  <div class="emoji" data-keywords="white flower" onclick="copyEmoji('💮')">💮</div>
+  <div class="emoji" data-keywords="rosette flower badge" onclick="copyEmoji('🏵️')">🏵️</div>
+  <div class="emoji" data-keywords="bouquet flowers" onclick="copyEmoji('💐')">💐</div>
+  <div class="emoji" data-keywords="rose flower" onclick="copyEmoji('🌹')">🌹</div>
+  <div class="emoji" data-keywords="wilted flower dead" onclick="copyEmoji('🥀')">🥀</div>
+  <div class="emoji" data-keywords="sunflower" onclick="copyEmoji('🌻')">🌻</div>
+  <div class="emoji" data-keywords="hibiscus flower" onclick="copyEmoji('🌺')">🌺</div>
+
+  <!-- Sky & celestial -->
+  <div class="emoji" data-keywords="sun" onclick="copyEmoji('☀️')">☀️</div>
+  <div class="emoji" data-keywords="sun behind small cloud" onclick="copyEmoji('🌤️')">🌤️</div>
+  <div class="emoji" data-keywords="sun behind cloud" onclick="copyEmoji('⛅')">⛅</div>
+  <div class="emoji" data-keywords="sun behind large cloud" onclick="copyEmoji('🌥️')">🌥️</div>
+  <div class="emoji" data-keywords="sun behind rain cloud" onclick="copyEmoji('🌦️')">🌦️</div>
+  <div class="emoji" data-keywords="rainbow" onclick="copyEmoji('🌈')">🌈</div>
+  <div class="emoji" data-keywords="moon crescent" onclick="copyEmoji('🌙')">🌙</div>
+  <div class="emoji" data-keywords="new moon" onclick="copyEmoji('🌑')">🌑</div>
+  <div class="emoji" data-keywords="first quarter moon" onclick="copyEmoji('🌓')">🌓</div>
+  <div class="emoji" data-keywords="full moon" onclick="copyEmoji('🌕')">🌕</div>
+  <div class="emoji" data-keywords="glowing star" onclick="copyEmoji('🌟')">🌟</div>
+  <div class="emoji" data-keywords="shooting star" onclick="copyEmoji('🌠')">🌠</div>
+  <div class="emoji" data-keywords="milky way galaxy" onclick="copyEmoji('🌌')">🌌</div>
+
+  <!-- Weather -->
+  <div class="emoji" data-keywords="cloud" onclick="copyEmoji('☁️')">☁️</div>
+  <div class="emoji" data-keywords="cloud with rain" onclick="copyEmoji('🌧️')">🌧️</div>
+  <div class="emoji" data-keywords="cloud with lightning" onclick="copyEmoji('🌩️')">🌩️</div>
+  <div class="emoji" data-keywords="cloud with lightning rain storm" onclick="copyEmoji('⛈️')">⛈️</div>
+  <div class="emoji" data-keywords="cloud with snow" onclick="copyEmoji('🌨️')">🌨️</div>
+  <div class="emoji" data-keywords="cyclone swirl" onclick="copyEmoji('🌀')">🌀</div>
+  <div class="emoji" data-keywords="tornado cyclone" onclick="copyEmoji('🌪️')">🌪️</div>
+  <div class="emoji" data-keywords="fog" onclick="copyEmoji('🌫️')">🌫️</div>
+  <div class="emoji" data-keywords="snowflake" onclick="copyEmoji('❄️')">❄️</div>
+  <div class="emoji" data-keywords="snowman" onclick="copyEmoji('☃️')">☃️</div>
+  <div class="emoji" data-keywords="snowman without snow" onclick="copyEmoji('⛄')">⛄</div>
+  <div class="emoji" data-keywords="droplet water" onclick="copyEmoji('💧')">💧</div>
+  <div class="emoji" data-keywords="sweat droplets splash" onclick="copyEmoji('💦')">💦</div>
+  <div class="emoji" data-keywords="water wave sea" onclick="copyEmoji('🌊')">🌊</div>
+
+  <!-- Fire & disasters -->
+  <div class="emoji" data-keywords="fire flame" onclick="copyEmoji('🔥')">🔥</div>
+  <div class="emoji" data-keywords="comet" onclick="copyEmoji('☄️')">☄️</div>
+</div>
+
+ <div class="category">
+  <h2>🏁 Flags & Signals</h2>
+
+  <!-- Racing / markers -->
+  <div class="emoji" data-keywords="chequered flag race finish" onclick="copyEmoji('🏁')">🏁</div>
+  <div class="emoji" data-keywords="triangular flag post" onclick="copyEmoji('🚩')">🚩</div>
+  <div class="emoji" data-keywords="crossed flags japan festival" onclick="copyEmoji('🎌')">🎌</div>
+  <div class="emoji" data-keywords="black flag" onclick="copyEmoji('🏴')">🏴</div>
+  <div class="emoji" data-keywords="white flag surrender" onclick="copyEmoji('🏳️')">🏳️</div>
+  <div class="emoji" data-keywords="rainbow flag pride lgbt" onclick="copyEmoji('🏳️‍🌈')">🏳️‍🌈</div>
+  <div class="emoji" data-keywords="transgender flag" onclick="copyEmoji('🏳️‍⚧️')">🏳️‍⚧️</div>
+
+  <!-- Signal flags -->
+  <div class="emoji" data-keywords="pirate flag skull crossbones" onclick="copyEmoji('🏴‍☠️')">🏴‍☠️</div>
+  <div class="emoji" data-keywords="warning flag on pole" onclick="copyEmoji('🚩')">🚩</div>
+
+  <!-- Example country flags (you can add more) -->
+  <div class="emoji" data-keywords="flag united kingdom uk britain" onclick="copyEmoji('🇬🇧')">🇬🇧</div>
+  <div class="emoji" data-keywords="flag united states usa america" onclick="copyEmoji('🇺🇸')">🇺🇸</div>
+  <div class="emoji" data-keywords="flag ireland irish" onclick="copyEmoji('🇮🇪')">🇮🇪</div>
+  <div class="emoji" data-keywords="flag european union eu" onclick="copyEmoji('🇪🇺')">🇪🇺</div>
+  <div class="emoji" data-keywords="flag canada" onclick="copyEmoji('🇨🇦')">🇨🇦</div>
+  <div class="emoji" data-keywords="flag australia" onclick="copyEmoji('🇦🇺')">🇦🇺</div>
+  <div class="emoji" data-keywords="flag japan" onclick="copyEmoji('🇯🇵')">🇯🇵</div>
+  <div class="emoji" data-keywords="flag germany" onclick="copyEmoji('🇩🇪')">🇩🇪</div>
+  <div class="emoji" data-keywords="flag france" onclick="copyEmoji('🇫🇷')">🇫🇷</div>
+  <div class="emoji" data-keywords="flag italy" onclick="copyEmoji('🇮🇹')">🇮🇹</div>
+  <div class="emoji" data-keywords="flag spain" onclick="copyEmoji('🇪🇸')">🇪🇸</div>
+  <div class="emoji" data-keywords="flag brazil" onclick="copyEmoji('🇧🇷')">🇧🇷</div>
+  <div class="emoji" data-keywords="flag india" onclick="copyEmoji('🇮🇳')">🇮🇳</div>
+  <div class="emoji" data-keywords="flag china" onclick="copyEmoji('🇨🇳')">🇨🇳</div>
+  <div class="emoji" data-keywords="flag south korea" onclick="copyEmoji('🇰🇷')">🇰🇷</div>
+</div>
+
+ <div class="category">
+  <h2>💞 Extra Hearts & Emotions</h2>
+
+  <!-- Extra hearts / love -->
+  <div class="emoji" data-keywords="heart with arrow love" onclick="copyEmoji('💘')">💘</div>
+  <div class="emoji" data-keywords="heart with ribbon gift" onclick="copyEmoji('💝')">💝</div>
+  <div class="emoji" data-keywords="sparkling heart love" onclick="copyEmoji('💖')">💖</div>
+  <div class="emoji" data-keywords="growing heart" onclick="copyEmoji('💗')">💗</div>
+  <div class="emoji" data-keywords="beating heart" onclick="copyEmoji('💓')">💓</div>
+  <div class="emoji" data-keywords="revolving hearts" onclick="copyEmoji('💞')">💞</div>
+  <div class="emoji" data-keywords="two hearts" onclick="copyEmoji('💕')">💕</div>
+  <div class="emoji" data-keywords="heart decoration" onclick="copyEmoji('💟')">💟</div>
+  <div class="emoji" data-keywords="heart exclamation" onclick="copyEmoji('❣️')">❣️</div>
+  <div class="emoji" data-keywords="broken heart sad" onclick="copyEmoji('💔')">💔</div>
+
+  <!-- Extra emotion symbols -->
+  <div class="emoji" data-keywords="anger symbol comic" onclick="copyEmoji('💢')">💢</div>
+  <div class="emoji" data-keywords="dizzy symbol" onclick="copyEmoji('💫')">💫</div>
+  <div class="emoji" data-keywords="sweat droplets" onclick="copyEmoji('💦')">💦</div>
+  <div class="emoji" data-keywords="dash symbol fast running" onclick="copyEmoji('💨')">💨</div>
+  <div class="emoji" data-keywords="zzz sleeping" onclick="copyEmoji('💤')">💤</div>
+  <div class="emoji" data-keywords="collision boom" onclick="copyEmoji('💥')">💥</div>
+  <div class="emoji" data-keywords="bomb explosion" onclick="copyEmoji('💣')">💣</div>
+  <div class="emoji" data-keywords="thought balloon thinking" onclick="copyEmoji('💭')">💭</div>
+  <div class="emoji" data-keywords="speech balloon chat" onclick="copyEmoji('💬')">💬</div>
+  <div class="emoji" data-keywords="left speech bubble" onclick="copyEmoji('🗨️')">🗨️</div>
+  <div class="emoji" data-keywords="right anger bubble swear" onclick="copyEmoji('🗯️')">🗯️</div>
+</div>
+
+ 
+ <div class="category">
+  <h2>🎭 Activity & Entertainment</h2>
+
+  <!-- Shows & arts -->
+  <div class="emoji" data-keywords="circus tent show festival" onclick="copyEmoji('🎪')">🎪</div>
+  <div class="emoji" data-keywords="performing arts theater masks" onclick="copyEmoji('🎭')">🎭</div>
+  <div class="emoji" data-keywords="artist palette painting art" onclick="copyEmoji('🎨')">🎨</div>
+  <div class="emoji" data-keywords="clapper board movie film" onclick="copyEmoji('🎬')">🎬</div>
+  <div class="emoji" data-keywords="ticket event" onclick="copyEmoji('🎟️')">🎟️</div>
+  <div class="emoji" data-keywords="admission tickets concert cinema" onclick="copyEmoji('🎫')">🎫</div>
+  <div class="emoji" data-keywords="microphone singing karaoke" onclick="copyEmoji('🎤')">🎤</div>
+  <div class="emoji" data-keywords="headphone music listen" onclick="copyEmoji('🎧')">🎧</div>
+  <div class="emoji" data-keywords="musical score sheet music" onclick="copyEmoji('🎼')">🎼</div>
+  <div class="emoji" data-keywords="musical keyboard piano" onclick="copyEmoji('🎹')">🎹</div>
+  <div class="emoji" data-keywords="violin music" onclick="copyEmoji('🎻')">🎻</div>
+  <div class="emoji" data-keywords="trumpet music" onclick="copyEmoji('🎺')">🎺</div>
+  <div class="emoji" data-keywords="saxophone music" onclick="copyEmoji('🎷')">🎷</div>
+  <div class="emoji" data-keywords="guitar music" onclick="copyEmoji('🎸')">🎸</div>
+  <div class="emoji" data-keywords="banjo music" onclick="copyEmoji('🪕')">🪕</div>
+  <div class="emoji" data-keywords="drum with drumsticks" onclick="copyEmoji('🥁')">🥁</div>
+  <div class="emoji" data-keywords="long drum instrument" onclick="copyEmoji('🪘')">🪘</div>
+
+  <!-- Fairground & fun -->
+  <div class="emoji" data-keywords="ferris wheel fair" onclick="copyEmoji('🎡')">🎡</div>
+  <div class="emoji" data-keywords="roller coaster theme park" onclick="copyEmoji('🎢')">🎢</div>
+  <div class="emoji" data-keywords="carousel horse ride" onclick="copyEmoji('🎠')">🎠</div>
+
+  <!-- Celebrations (extra) -->
+  <div class="emoji" data-keywords="sparkler celebration" onclick="copyEmoji('🎇')">🎇</div>
+  <div class="emoji" data-keywords="fireworks" onclick="copyEmoji('🎆')">🎆</div>
+  <div class="emoji" data-keywords="wind chime festival" onclick="copyEmoji('🎐')">🎐</div>
+  <div class="emoji" data-keywords="japanese dolls festival" onclick="copyEmoji('🎎')">🎎</div>
+  <div class="emoji" data-keywords="carp streamer festival" onclick="copyEmoji('🎏')">🎏</div>
+  <div class="emoji" data-keywords="pine decoration new year" onclick="copyEmoji('🎍')">🎍</div>
+  <div class="emoji" data-keywords="moon viewing ceremony" onclick="copyEmoji('🎑')">🎑</div>
+  <div class="emoji" data-keywords="studio microphone broadcast podcast" onclick="copyEmoji('🎙️')">🎙️</div>
+<div class="emoji" data-keywords="level slider mixer audio" onclick="copyEmoji('🎚️')">🎚️</div>
+<div class="emoji" data-keywords="control knobs mixer" onclick="copyEmoji('🎛️')">🎛️</div>
+<div class="emoji" data-keywords="radio" onclick="copyEmoji('📻')">📻</div>
+<div class="emoji" data-keywords="television tv" onclick="copyEmoji('📺')">📺</div>
+<div class="emoji" data-keywords="movie camera film" onclick="copyEmoji('🎥')">🎥</div>
+<div class="emoji" data-keywords="film projector" onclick="copyEmoji('📽️')">📽️</div>
+<div class="emoji" data-keywords="cinema film frames" onclick="copyEmoji('🎦')">🎦</div>
+<div class="emoji" data-keywords="dvd disc" onclick="copyEmoji('📀')">📀</div>
+<div class="emoji" data-keywords="cd disc" onclick="copyEmoji('💿')">💿</div>
+<div class="emoji" data-keywords="videocassette vhs tape" onclick="copyEmoji('📼')">📼</div>
+<div class="emoji" data-keywords="camera" onclick="copyEmoji('📷')">📷</div>
+<div class="emoji" data-keywords="camera with flash" onclick="copyEmoji('📸')">📸</div>
+<div class="emoji" data-keywords="video camera" onclick="copyEmoji('📹')">📹</div>
+
+<div class="emoji" data-keywords="sparkler handheld firework" onclick="copyEmoji('🎇')">🎇</div>
+<div class="emoji" data-keywords="fireworks celebration" onclick="copyEmoji('🎆')">🎆</div>
+<div class="emoji" data-keywords="tanabata tree festival" onclick="copyEmoji('🎋')">🎋</div>
+<div class="emoji" data-keywords="rice cracker festival food" onclick="copyEmoji('🍘')">🍘</div>
+<div class="emoji" data-keywords="rice ball onigiri" onclick="copyEmoji('🍙')">🍙</div>
+
+<div class="emoji" data-keywords="wrapped gift present" onclick="copyEmoji('🎁')">🎁</div>
+<div class="emoji" data-keywords="love letter envelope heart" onclick="copyEmoji('💌')">💌</div>
+<div class="emoji" data-keywords="reminder ribbon awareness" onclick="copyEmoji('🎗️')">🎗️</div>
+<div class="emoji" data-keywords="label tag" onclick="copyEmoji('🏷️')">🏷️</div>
+
+<div class="emoji" data-keywords="joystick retro gaming" onclick="copyEmoji('🕹️')">🕹️</div>
+<div class="emoji" data-keywords="video game controller" onclick="copyEmoji('🎮')">🎮</div>
+<div class="emoji" data-keywords="chess pawn board game" onclick="copyEmoji('♟️')">♟️</div>
+<div class="emoji" data-keywords="mahjong tile red dragon" onclick="copyEmoji('🀄')">🀄</div>
+<div class="emoji" data-keywords="joker card playing" onclick="copyEmoji('🃏')">🃏</div>
+<div class="emoji" data-keywords="karaoke bar music" onclick="copyEmoji('🎤')">🎤</div>
+<div class="emoji" data-keywords="slot machine casino" onclick="copyEmoji('🎰')">🎰</div>
+<div class="emoji" data-keywords="game die dice" onclick="copyEmoji('🎲')">🎲</div>
+<div class="emoji" data-keywords="puzzle piece game" onclick="copyEmoji('🧩')">🧩</div>
+<div class="emoji" data-keywords="yo-yo toy" onclick="copyEmoji('🪀')">🪀</div>
+<div class="emoji" data-keywords="kite outdoor toy" onclick="copyEmoji('🪁')">🪁</div>
+<div class="emoji" data-keywords="crystal ball fortune telling" onclick="copyEmoji('🔮')">🔮</div>
+
+</div>
+
+ 
+  <div class="category">
+    <h2>🍕 Food</h2>
+  <!-- Fruit -->
+  <div class="emoji" data-keywords="grapes fruit" onclick="copyEmoji('🍇')">🍇</div>
+  <div class="emoji" data-keywords="melon fruit" onclick="copyEmoji('🍈')">🍈</div>
+  <div class="emoji" data-keywords="watermelon fruit" onclick="copyEmoji('🍉')">🍉</div>
+  <div class="emoji" data-keywords="tangerine orange fruit" onclick="copyEmoji('🍊')">🍊</div>
+  <div class="emoji" data-keywords="lemon fruit" onclick="copyEmoji('🍋')">🍋</div>
+  <div class="emoji" data-keywords="banana fruit" onclick="copyEmoji('🍌')">🍌</div>
+  <div class="emoji" data-keywords="pineapple fruit" onclick="copyEmoji('🍍')">🍍</div>
+  <div class="emoji" data-keywords="mango fruit" onclick="copyEmoji('🥭')">🥭</div>
+  <div class="emoji" data-keywords="red apple fruit" onclick="copyEmoji('🍎')">🍎</div>
+  <div class="emoji" data-keywords="green apple fruit" onclick="copyEmoji('🍏')">🍏</div>
+  <div class="emoji" data-keywords="pear fruit" onclick="copyEmoji('🍐')">🍐</div>
+  <div class="emoji" data-keywords="peach fruit" onclick="copyEmoji('🍑')">🍑</div>
+  <div class="emoji" data-keywords="cherries fruit" onclick="copyEmoji('🍒')">🍒</div>
+  <div class="emoji" data-keywords="strawberry fruit" onclick="copyEmoji('🍓')">🍓</div>
+  <div class="emoji" data-keywords="kiwi fruit" onclick="copyEmoji('🥝')">🥝</div>
+  <div class="emoji" data-keywords="tomato fruit" onclick="copyEmoji('🍅')">🍅</div>
+  <div class="emoji" data-keywords="coconut fruit" onclick="copyEmoji('🥥')">🥥</div>
+
+  <!-- Vegetables -->
+  <div class="emoji" data-keywords="avocado vegetable" onclick="copyEmoji('🥑')">🥑</div>
+  <div class="emoji" data-keywords="eggplant aubergine vegetable" onclick="copyEmoji('🍆')">🍆</div>
+  <div class="emoji" data-keywords="potato vegetable" onclick="copyEmoji('🥔')">🥔</div>
+  <div class="emoji" data-keywords="carrot vegetable" onclick="copyEmoji('🥕')">🥕</div>
+  <div class="emoji" data-keywords="ear of corn maize vegetable" onclick="copyEmoji('🌽')">🌽</div>
+  <div class="emoji" data-keywords="hot pepper chili" onclick="copyEmoji('🌶️')">🌶️</div>
+  <div class="emoji" data-keywords="cucumber vegetable" onclick="copyEmoji('🥒')">🥒</div>
+  <div class="emoji" data-keywords="leafy green lettuce" onclick="copyEmoji('🥬')">🥬</div>
+  <div class="emoji" data-keywords="broccoli vegetable" onclick="copyEmoji('🥦')">🥦</div>
+  <div class="emoji" data-keywords="garlic vegetable" onclick="copyEmoji('🧄')">🧄</div>
+  <div class="emoji" data-keywords="onion vegetable" onclick="copyEmoji('🧅')">🧅</div>
+  <div class="emoji" data-keywords="peanuts nuts" onclick="copyEmoji('🥜')">🥜</div>
+  <div class="emoji" data-keywords="beans kidney" onclick="copyEmoji('🫘')">🫘</div>
+  <div class="emoji" data-keywords="chestnut" onclick="copyEmoji('🌰')">🌰</div>
+
+  <!-- Bread & breakfast -->
+  <div class="emoji" data-keywords="bread loaf" onclick="copyEmoji('🍞')">🍞</div>
+  <div class="emoji" data-keywords="croissant pastry" onclick="copyEmoji('🥐')">🥐</div>
+  <div class="emoji" data-keywords="baguette bread" onclick="copyEmoji('🥖')">🥖</div>
+  <div class="emoji" data-keywords="flatbread pita" onclick="copyEmoji('🫓')">🫓</div>
+  <div class="emoji" data-keywords="pretzel" onclick="copyEmoji('🥨')">🥨</div>
+  <div class="emoji" data-keywords="bagel" onclick="copyEmoji('🥯')">🥯</div>
+  <div class="emoji" data-keywords="pancakes breakfast" onclick="copyEmoji('🥞')">🥞</div>
+  <div class="emoji" data-keywords="waffle breakfast" onclick="copyEmoji('🧇')">🧇</div>
+  <div class="emoji" data-keywords="cheese wedge" onclick="copyEmoji('🧀')">🧀</div>
+  <div class="emoji" data-keywords="egg breakfast" onclick="copyEmoji('🍳')">🍳</div>
+  <div class="emoji" data-keywords="bacon" onclick="copyEmoji('🥓')">🥓</div>
+  <div class="emoji" data-keywords="butter" onclick="copyEmoji('🧈')">🧈</div>
+
+  <!-- Meals / fast food -->
+  <div class="emoji" data-keywords="green salad" onclick="copyEmoji('🥗')">🥗</div>
+  <div class="emoji" data-keywords="popcorn snack" onclick="copyEmoji('🍿')">🍿</div>
+  <div class="emoji" data-keywords="pizza slice" onclick="copyEmoji('🍕')">🍕</div>
+  <div class="emoji" data-keywords="hamburger burger" onclick="copyEmoji('🍔')">🍔</div>
+  <div class="emoji" data-keywords="french fries chips" onclick="copyEmoji('🍟')">🍟</div>
+  <div class="emoji" data-keywords="hot dog" onclick="copyEmoji('🌭')">🌭</div>
+  <div class="emoji" data-keywords="sandwich" onclick="copyEmoji('🥪')">🥪</div>
+  <div class="emoji" data-keywords="taco" onclick="copyEmoji('🌮')">🌮</div>
+  <div class="emoji" data-keywords="burrito" onclick="copyEmoji('🌯')">🌯</div>
+  <div class="emoji" data-keywords="stuffed flatbread pita" onclick="copyEmoji('🥙')">🥙</div>
+  <div class="emoji" data-keywords="falafel" onclick="copyEmoji('🧆')">🧆</div>
+  <div class="emoji" data-keywords="cooked rice bowl" onclick="copyEmoji('🍚')">🍚</div>
+  <div class="emoji" data-keywords="rice ball" onclick="copyEmoji('🍙')">🍙</div>
+  <div class="emoji" data-keywords="rice cracker" onclick="copyEmoji('🍘')">🍘</div>
+  <div class="emoji" data-keywords="bento box" onclick="copyEmoji('🍱')">🍱</div>
+  <div class="emoji" data-keywords="spaghetti pasta" onclick="copyEmoji('🍝')">🍝</div>
+  <div class="emoji" data-keywords="steaming bowl ramen" onclick="copyEmoji('🍜')">🍜</div>
+  <div class="emoji" data-keywords="pot of food stew" onclick="copyEmoji('🍲')">🍲</div>
+  <div class="emoji" data-keywords="fondue" onclick="copyEmoji('🫕')">🫕</div>
+  <div class="emoji" data-keywords="curry rice" onclick="copyEmoji('🍛')">🍛</div>
+  <div class="emoji" data-keywords="shallow pan food paella" onclick="copyEmoji('🥘')">🥘</div>
+  <div class="emoji" data-keywords="tamale" onclick="copyEmoji('🫔')">🫔</div>
+
+  <!-- Asian food / seafood -->
+  <div class="emoji" data-keywords="sushi" onclick="copyEmoji('🍣')">🍣</div>
+  <div class="emoji" data-keywords="fried shrimp tempura" onclick="copyEmoji('🍤')">🍤</div>
+  <div class="emoji" data-keywords="oden stew" onclick="copyEmoji('🍢')">🍢</div>
+  <div class="emoji" data-keywords="dango sweets" onclick="copyEmoji('🍡')">🍡</div>
+  <div class="emoji" data-keywords="fish cake swirl" onclick="copyEmoji('🍥')">🍥</div>
+  <div class="emoji" data-keywords="takeout box" onclick="copyEmoji('🥡')">🥡</div>
+  <div class="emoji" data-keywords="lobster seafood" onclick="copyEmoji('🦞')">🦞</div>
+  <div class="emoji" data-keywords="crab seafood" onclick="copyEmoji('🦀')">🦀</div>
+  <div class="emoji" data-keywords="shrimp prawn seafood" onclick="copyEmoji('🦐')">🦐</div>
+  <div class="emoji" data-keywords="oyster seafood" onclick="copyEmoji('🦪')">🦪</div>
+
+  <!-- Sweets & desserts -->
+  <div class="emoji" data-keywords="soft ice cream" onclick="copyEmoji('🍦')">🍦</div>
+  <div class="emoji" data-keywords="shaved ice" onclick="copyEmoji('🍧')">🍧</div>
+  <div class="emoji" data-keywords="ice cream dessert" onclick="copyEmoji('🍨')">🍨</div>
+  <div class="emoji" data-keywords="doughnut donut" onclick="copyEmoji('🍩')">🍩</div>
+  <div class="emoji" data-keywords="cookie biscuit" onclick="copyEmoji('🍪')">🍪</div>
+  <div class="emoji" data-keywords="birthday cake" onclick="copyEmoji('🎂')">🎂</div>
+  <div class="emoji" data-keywords="shortcake slice of cake" onclick="copyEmoji('🍰')">🍰</div>
+  <div class="emoji" data-keywords="cupcake" onclick="copyEmoji('🧁')">🧁</div>
+  <div class="emoji" data-keywords="pie dessert" onclick="copyEmoji('🥧')">🥧</div>
+  <div class="emoji" data-keywords="chocolate bar" onclick="copyEmoji('🍫')">🍫</div>
+  <div class="emoji" data-keywords="candy sweet" onclick="copyEmoji('🍬')">🍬</div>
+  <div class="emoji" data-keywords="lollipop sweet" onclick="copyEmoji('🍭')">🍭</div>
+  <div class="emoji" data-keywords="custard pudding" onclick="copyEmoji('🍮')">🍮</div>
+  <div class="emoji" data-keywords="honey pot" onclick="copyEmoji('🍯')">🍯</div>
+  <div class="emoji" data-keywords="fortune cookie" onclick="copyEmoji('🥠')">🥠</div>
+  <div class="emoji" data-keywords="mooncake" onclick="copyEmoji('🥮')">🥮</div>
+
+  <!-- Drinks -->
+  <div class="emoji" data-keywords="baby bottle milk" onclick="copyEmoji('🍼')">🍼</div>
+  <div class="emoji" data-keywords="glass of milk" onclick="copyEmoji('🥛')">🥛</div>
+  <div class="emoji" data-keywords="hot beverage coffee tea" onclick="copyEmoji('☕')">☕</div>
+  <div class="emoji" data-keywords="teapot" onclick="copyEmoji('🫖')">🫖</div>
+  <div class="emoji" data-keywords="teacup without handle green tea" onclick="copyEmoji('🍵')">🍵</div>
+  <div class="emoji" data-keywords="sake bottle cup" onclick="copyEmoji('🍶')">🍶</div>
+  <div class="emoji" data-keywords="bottle with popping cork champagne" onclick="copyEmoji('🍾')">🍾</div>
+  <div class="emoji" data-keywords="wine glass" onclick="copyEmoji('🍷')">🍷</div>
+  <div class="emoji" data-keywords="cocktail glass martini" onclick="copyEmoji('🍸')">🍸</div>
+  <div class="emoji" data-keywords="tropical drink cocktail" onclick="copyEmoji('🍹')">🍹</div>
+  <div class="emoji" data-keywords="beer mug" onclick="copyEmoji('🍺')">🍺</div>
+  <div class="emoji" data-keywords="clinking beer mugs" onclick="copyEmoji('🍻')">🍻</div>
+  <div class="emoji" data-keywords="clinking glasses cheers" onclick="copyEmoji('🥂')">🥂</div>
+  <div class="emoji" data-keywords="tumbler glass whisky" onclick="copyEmoji('🥃')">🥃</div>
+  <div class="emoji" data-keywords="cup with straw soda" onclick="copyEmoji('🥤')">🥤</div>
+  <div class="emoji" data-keywords="bubble tea boba" onclick="copyEmoji('🧋')">🧋</div>
+  <div class="emoji" data-keywords="mate drink" onclick="copyEmoji('🧉')">🧉</div>
+
+  <!-- Dishware / utensils -->
+  <div class="emoji" data-keywords="fork and knife" onclick="copyEmoji('🍴')">🍴</div>
+  <div class="emoji" data-keywords="fork and knife with plate" onclick="copyEmoji('🍽️')">🍽️</div>
+  <div class="emoji" data-keywords="bowl with spoon" onclick="copyEmoji('🥣')">🥣</div>
+  <div class="emoji" data-keywords="spoon utensil" onclick="copyEmoji('🥄')">🥄</div>
+  <div class="emoji" data-keywords="kitchen knife" onclick="copyEmoji('🔪')">🔪</div>
+  <div class="emoji" data-keywords="chopsticks" onclick="copyEmoji('🥢')">🥢</div>
+</div>
+  </div>
+
+  <footer>
+    Made with ❤️ — Add more sections below!
+  </footer>
+
+  <div id="copyNotification"></div>
+
+  <script>
+    // fallback for non-secure contexts
+    function fallbackCopyText(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {
+        console.error('Copy failed', err);
+      }
+      document.body.removeChild(textarea);
+    }
+
+    function copyEmoji(emoji) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(emoji).then(showCopied.bind(null, emoji));
       } else {
-        drops[i]++;
+        fallbackCopyText(emoji);
+        showCopied(emoji);
       }
     }
-    requestAnimationFrame(drawMatrix);
-  }
-  drawMatrix();
 
-  // PARTICLES
-  const particleLayer = document.getElementById('particle-layer');
-  function spawnParticles(count) {
-    for (let i = 0; i < count; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      const x = Math.random() * 100;
-      const y = 60 + Math.random() * 40;
-      p.style.left = x + '%';
-      p.style.top = y + '%';
-      p.style.animationDelay = (Math.random() * 12).toFixed(2) + 's';
-      particleLayer.appendChild(p);
-    }
-  }
-  spawnParticles(18); // slightly fewer for less lag
-
-  // TERMINAL + HUD
-  const terminal = document.getElementById('terminal');
-  const flash    = document.getElementById('flash');
-  const globalGlitch = document.getElementById('global-glitch');
-
-  const hudHosts     = document.getElementById('hud-accounts');
-  const hudAuthBadge = document.querySelector('#terminal-header .badge');
-  const hudLoadEl    = document.getElementById('hud-load');
-  const hudDots      = document.getElementById('hud-dots').children;
-  const hudVault     = document.getElementById('hud-vault');
-  const hudBalance   = document.getElementById('hud-balance');
-  const hudStolen    = document.getElementById('hud-stolen');
-  const hudVector    = document.getElementById('hud-vector');
-
-  // Command line
-  const commandLine = document.createElement('div');
-  commandLine.style.marginTop = '6px';
-  const promptSpan = document.createElement('span');
-  promptSpan.textContent = 'BankHack> ';
-  const commandInput = document.createElement('span');
-  commandInput.contentEditable = 'true';
-  commandInput.spellcheck = false;
-  commandInput.style.outline = 'none';
-  commandInput.style.whiteSpace = 'pre';
-  commandLine.appendChild(promptSpan);
-  commandLine.appendChild(commandInput);
-  terminal.appendChild(commandLine);
-
-  // LOGIN + HOWTO
-  const loginOverlay = document.getElementById('login-overlay');
-  const loginName    = document.getElementById('login-name');
-  const loginUser    = document.getElementById('login-user');
-  const loginPass    = document.getElementById('login-pass');
-  const loginBtn     = document.getElementById('login-btn');
-  const loginError   = document.getElementById('login-error');
-
-  const howtoOverlay = document.getElementById('howto-overlay');
-  const howtoBtn     = document.getElementById('howto-btn');
-  const howtoClose   = document.getElementById('howto-close');
-
-  const VALID_USER = 'test1234';
-  const VALID_PASS = 'test3333';
-  let isLoggedIn = false;
-  let operatorName = 'operator';
-
-  const scriptLines = [
-    "import time, sqlite3, random",
-    "from cryptography.fernet import Fernet",
-    "",
-    "TARGET_DB = 'secure_bank_vault.db'",
-    "VAULT_KEY = b'BANKHACK_KEY_2026=='",
-    "",
-    "def log(msg, level='info'):",
-    "    ts = time.strftime('%H:%M:%S')",
-    "    print(f'[{ts}] [{level.upper()}] {msg}')",
-    "",
-    "def bypass_firewall():",
-    "    log('probing firewall TCP/443,3389,1433...')",
-    "    time.sleep(0.1)",
-    "    log('FIREWALL: DOWN - SQLi vector confirmed')",
-    "    return True",
-    "",
-    "def decrypt_vault(key):",
-    "    log(f'decrypting {TARGET_DB} with {key[:12]}...')",
-    "    log('VAULT: UNLOCKED - 1,247 accounts exposed')",
-    "    return sqlite3.connect(TARGET_DB)",
-    "",
-    "def dump_accounts(db):",
-    "    cursor = db.cursor()",
-    "    accounts = cursor.execute('SELECT id, balance FROM accounts').fetchall()",
-    "    log(f'DUMP: {len(accounts)} high-value targets')",
-    "    for acc in accounts[:5]:",
-    "        log(f'  ACC#{acc[0]} => ${acc[1]:,.2f}')",
-    "",
-    "def exfiltrate_funds(db, amount):",
-    "    log(f'EXFIL: transferring ${amount:,.0f} to mule acct 0xMULE_WALLET')",
-    "    log('TX: CONFIRMED - blockchain anchor reached.')",
-    "",
-    "def main():",
-    "    log('BankHack Breach Framework v2.0 BOOT')",
-    "    if bypass_firewall():",
-    "        db = decrypt_vault(VAULT_KEY)",
-    "        dump_accounts(db)",
-    "        exfiltrate_funds(db, 5_000_000)",
-    "        log('BREACH COMPLETE - laundering through crypto mixer')",
-    "    else:",
-    "        log('ABORT: intrusion detected', 'error')",
-    "",
-    "if __name__ == '__main__':",
-    "    main()",
-    "",
-    "# --- BREACH SUMMARY ---",
-    "# accounts_breached => 1247",
-    "# funds_exfiltrated => $5,000,000",
-    "# traces_cleaned    => CONFIRMED",
-    "# re-arm for next hit? spam keys...",
-  ];
-
-  const preBootBanner = [
-    "BANKHACK · OPERATOR LOGIN ACCEPTED",
-    "----------------------------------",
-    "mounting vault snapshot...",
-    "arming breach playbook...",
-    "spinning up intrusion core...",
-    ""
-  ];
-
-  const gibberishLines = [
-    "010101 CORE::DECRYPT << 7E 9A F1 C3 88 42 10 3E",
-    ">>> Σλ ƒ(x)=∫HACK e^{-iπt} · 0xDEAD · 0xBEEF dt",
-    "entropy::pulse ΔΣ=+0.0329 :: channel desync",
-    "CORE-TRACE::sample[42] => 7f ff 0d 13 37 c0 de",
-    "shim://inject · lattice[Ω13] · phase=π/2 + jitter"
-  ];
-
-  let lineIndex   = 0;
-  let charIndex   = 0;
-  let typingTimer = null;
-  let idleTimer   = null;
-  const idleDelay = 400;
-  let hostsTotal = 1247;
-  let hostsScanned = 0;
-  let commandMode = false;
-  let currentBalance = 5000000;
-  let stolenTotal = 0;
-
-  function injectBanner() {
-    const ts = new Date().toTimeString().slice(0, 8);
-    const stamped = preBootBanner.map((l, i) =>
-      i < 2 ? `[[ ${l} ]]` : `[${ts}] ${l}`
-    );
-    scriptLines.unshift(...stamped, "");
-  }
-
-  function setBadge(text) {
-    hudAuthBadge.textContent = text;
-  }
-
-  // HOW TO overlay
-  if (howtoBtn && howtoOverlay && howtoClose) {
-    howtoOverlay.style.display = 'none';
-
-    howtoBtn.addEventListener('click', () => {
-      howtoOverlay.style.display = 'flex';
-    });
-
-    howtoClose.addEventListener('click', () => {
-      howtoOverlay.style.display = 'none';
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (howtoOverlay.style.display === 'flex' && e.key === 'Escape') {
-        howtoOverlay.style.display = 'none';
-      }
-    });
-  }
-
-  // LOGIN
-  function attemptLogin() {
-    const u = loginUser.value.trim();
-    const p = loginPass.value.trim();
-    const nameInput = loginName ? loginName.value.trim() : "";
-
-    if (u === VALID_USER && p === VALID_PASS) {
-      operatorName = nameInput || 'operator';
-      if (hudVector) {
-        hudVector.textContent = `SQLi · ${operatorName.toUpperCase()}`;
-      }
-
-      loginError.textContent = "";
-      isLoggedIn = true;
-      setBadge("LIVE · ARMED");
-      loginOverlay.style.transition = "opacity 0.4s ease-out";
-      loginOverlay.style.opacity = "0";
+    function showCopied(emoji) {
+      const notification = document.getElementById('copyNotification');
+      notification.textContent = `${emoji} ✅ Copied to clipboard!`;
+      notification.classList.add('show');
       setTimeout(() => {
-        loginOverlay.style.display = "none";
-      }, 400);
-      injectBanner();
-      addStatusLine(`[AUTH]  ${operatorName} authenticated. intrusion core ready.`, "ok");
-      addStatusLine("[HINT]  press any key to execute breach playbook...", "warn");
-      commandInput.focus();
-    } else {
-      loginError.textContent = "AUTH FAIL :: invalid credentials";
-      flashPulse(true);
-    }
-  }
-
-  loginBtn.addEventListener('click', attemptLogin);
-  loginUser.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') attemptLogin();
-  });
-  loginPass.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') attemptLogin();
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (!isLoggedIn) return;
-
-    if (commandMode && e.target === commandInput && e.key === 'Enter') {
-      e.preventDefault();
-      handleCommand(commandInput.textContent.trim());
-      commandInput.textContent = '';
-      return;
+        notification.classList.remove('show');
+      }, 2000);
     }
 
-    if (e.key === 'Enter' && commandMode) {
-      commandInput.focus();
-      return;
-    }
+    const searchInput = document.getElementById('searchInput');
+    const categories = document.querySelectorAll('.category');
 
-    if (!commandMode) {
-      if (e.key.length > 1 && e.key !== ' ' && e.key !== 'Enter') return;
-      resetIdleTimer();
-      if (!typingTimer) typeChar();
-    }
-  });
+    searchInput.addEventListener('input', function(e) {
+      const searchTerm = e.target.value.toLowerCase().trim();
+      const emojis = document.querySelectorAll('.emoji');
 
-  // TYPING
-  function typeChar() {
-    if (!idleTimer) {
-      typingTimer = null;
-      return;
-    }
+      // Show/hide emojis
+      emojis.forEach(emoji => {
+        const keywords = (emoji.getAttribute('data-keywords') || '').toLowerCase();
+        if (searchTerm === '' || keywords.includes(searchTerm)) {
+          emoji.classList.remove('hidden');
+        } else {
+          emoji.classList.add('hidden');
+        }
+      });
 
-    if (lineIndex >= scriptLines.length) {
-      typingTimer = null;
-      triggerEndEffects();
-      return;
-    }
-
-    const line = scriptLines[lineIndex];
-
-    if (charIndex < line.length) {
-      insertBeforeCursor(line[charIndex]);
-      charIndex++;
-      scrollTerminal();
-      randomHudJitter();
-      maybeDecryptionBurst();
-      const base = 11;
-      const jitter = Math.random() * 35;
-      typingTimer = setTimeout(typeChar, base + jitter);
-    } else {
-      insertBeforeCursor('\n');
-      handleLogicalEvents(line.trim());
-      lineIndex++;
-      charIndex = 0;
-      scrollTerminal();
-      typingTimer = setTimeout(typeChar, 95);
-    }
-  }
-
-  function insertBeforeCursor(text) {
-    const node = document.createTextNode(text);
-    terminal.insertBefore(node, commandLine);
-  }
-
-  function scrollTerminal() {
-    terminal.scrollTop = terminal.scrollHeight;
-  }
-
-  function resetIdleTimer() {
-    if (idleTimer) clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => {
-      idleTimer = null;
-      if (typingTimer) {
-        clearTimeout(typingTimer);
-        typingTimer = null;
-      }
-    }, idleDelay);
-  }
-
-  function handleLogicalEvents(line) {
-    if (line.includes('VAULT: UNLOCKED')) {
-      hostsScanned = hostsTotal;
-      hudHosts.textContent = `${hostsScanned}/${hostsTotal}`;
-      setVaultState('UNLOCKED');
-    }
-    if (line.includes('DUMP:')) {
-      hudHosts.textContent = `${hostsScanned}/${hostsTotal}`;
-      updateHudBalance();
-    }
-    if (line.includes('EXFIL:')) {
-      stolenTotal += 5000000;
-      updateHudStolen();
-      setVaultState('BREACHED');
-    }
-    if (line.includes('BREACH COMPLETE')) {
-      commandMode = true;
-      addStatusLine("\n[READY] commands: transfer 1000 | dump | launder | exit", "ok");
-      addStatusLine("[HINT]  type commands at BankHack> and press ENTER", "warn");
-      commandInput.focus();
-    }
-  }
-
-  function triggerEndEffects() {
-    flashPulse(true);
-    maybeGlobalGlitch();
-    let pulses = 0;
-    const maxPulses = 3;
-    const pulseInterval = setInterval(() => {
-      pulses++;
-      addStatusLine("[AUTH]   ACCESS OVERRIDE REQUEST => DENIED", "err");
-      if (pulses >= maxPulses) {
-        clearInterval(pulseInterval);
-        addStatusLine("[READY]  console re-armed. spam keys to replay breach.", "ok");
-      }
-    }, 550);
-  }
-
-  function addStatusLine(text, type) {
-    const span = document.createElement('span');
-    span.textContent = text + "\n";
-    span.className = "status-line " + (type || "");
-    terminal.insertBefore(span, commandLine);
-    scrollTerminal();
-  }
-
-  function flashPulse(hard) {
-    flash.classList.remove('active');
-    void flash.offsetWidth;
-    flash.style.background = hard
-      ? 'radial-gradient(circle at center, #f00a 0, transparent 60%)'
-      : 'radial-gradient(circle at center, #0f05 0, transparent 60%)';
-    flash.classList.add('active');
-  }
-
-  function maybeGlobalGlitch() {
-    if (Math.random() < 0.45) {
-      globalGlitch.classList.remove('active');
-      void globalGlitch.offsetWidth;
-      globalGlitch.classList.add('active');
-    }
-  }
-
-  function maybeDecryptionBurst() {
-    if (Math.random() < 0.005) {
-      const line = gibberishLines[Math.floor(Math.random() * gibberishLines.length)];
-      addStatusLine(line, "warn");
-    }
-  }
-
-  function setVaultState(state) {
-    hudVault.textContent = state;
-    hudVault.style.color = state === 'BREACHED'
-      ? '#00ff88'
-      : (state === 'UNLOCKED' ? '#ffe066' : '#ff4f4f');
-  }
-
-  function randomHudJitter() {
-    const load = 0.4 + Math.random() * 0.4;
-    hudLoadEl.style.transform = `scaleX(${load.toFixed(2)})`;
-
-    for (let i = 0; i < hudDots.length; i++) {
-      const active = Math.random() > 0.3;
-      hudDots[i].classList.toggle('active', active);
-    }
-  }
-
-  function updateHudBalance() {
-    hudBalance.textContent = `$${currentBalance.toLocaleString()}.00`;
-  }
-
-  function updateHudStolen() {
-    hudStolen.textContent = `$${stolenTotal.toLocaleString()}`;
-  }
-
-  function handleCommand(input) {
-    if (!input) return;
-    const cmd = input.toLowerCase();
-    addStatusLine(`BankHack> ${input}`, "warn");
-
-    if (cmd.startsWith('transfer ')) {
-      const amt = parseFloat(cmd.split(' ')[1]);
-      if (amt > 0 && currentBalance >= amt) {
-        stolenTotal += amt;
-        currentBalance -= amt;
-        addStatusLine(`[TX] $${amt.toLocaleString()} -> mule wallet CONFIRMED`, "ok");
-        updateHudBalance();
-        updateHudStolen();
-      } else {
-        addStatusLine("[ERR] insufficient funds or invalid amount", "err");
-      }
-    } else if (cmd === 'dump') {
-      addStatusLine("[DUMP] ACC#1247 => $2,450,000 | ACC#99 => $15M exposed", "ok");
-    } else if (cmd === 'launder') {
-      addStatusLine("[LAUNDER] routing through crypto mixers... CLEAN", "ok");
-    } else if (cmd === 'exit') {
-      commandMode = false;
-      addStatusLine("[SHUTDOWN] vault session terminated", "warn");
-    } else {
-      addStatusLine("[ERR] unknown command - try 'transfer 1000'", "err");
-    }
-  }
-
-  // 3D TILT
-  const deckWrapper = document.getElementById('deck-wrapper');
-
-  function handleTilt(e) {
-    const rect = deckWrapper.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    const maxRotate = 9;
-    const rotateY = (x - 0.5) * maxRotate * 2;
-    const rotateX = (0.5 - y) * maxRotate * 2;
-    deckWrapper.style.transform =
-      `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-    deckWrapper.classList.add('glow');
-  }
-
-  function resetTilt() {
-    deckWrapper.style.transform = 'rotateX(0deg) rotateY(0deg)';
-    deckWrapper.classList.remove('glow');
-  }
-
-  window.addEventListener('mousemove', handleTilt);
-  window.addEventListener('mouseleave', resetTilt);
-</script>
+      // Show/hide entire categories
+      categories.forEach(category => {
+        const emojiChildren = category.querySelectorAll('.emoji');
+        let hasVisible = false;
+        emojiChildren.forEach(emoji => {
+          if (!emoji.classList.contains('hidden')) {
+            hasVisible = true;
+          }
+        });
+        if (!hasVisible && searchTerm !== '') {
+          category.style.display = 'none';
+        } else {
+          category.style.display = '';
+        }
+      });
+    });
+  </script>
 
 </body>
 </html>
